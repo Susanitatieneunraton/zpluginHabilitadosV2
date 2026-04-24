@@ -1,0 +1,49 @@
+# -------------------------------
+# SAP BAS / Fiori / UI5 / DM Plugin
+# -------------------------------
+
+# Dependencias de Node.js (se regeneran con npm install)
+node_modules/
+
+# Carpetas de build
+dist/
+build/
+mta_archives/
+gen/
+
+# Archivos temporales de BAS/VSCode
+.vscode/
+.idea/
+*.code-workspace
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+*.log
+
+# Archivos de pruebas locales
+coverage/
+*.lcov
+
+# Configuración sensible o generada en BAS
+.default-env.json
+*.env
+.env.*
+
+# Archivos de despliegue generados
+*.mtar
+.mtar
+
+# SAP specific
+# Datos de credenciales o conexiones que no deben subirse
+.sap/
+
+# -------------------------------
+# Opcional: si usas testing UI5
+# -------------------------------
+karma-coverage/
+coverage.lcov

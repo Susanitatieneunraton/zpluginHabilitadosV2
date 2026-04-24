@@ -1,0 +1,15 @@
+{
+	"components": [
+		{
+			"id": "zpluginHabilitadosV2",
+			"type": "VIEW_PLUGIN",
+			"allowMultipleInstances": false,
+			"name": "serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2",
+			"propertyEditor": "serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.builder.PropertyEditor",
+			"i18n": "serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.i18n.i18n",
+            "productionProcessEnabled": true,
+           "productionProcessTitle": "zpluginHabilitadosV2",
+			"supportedPodTypes": ["WORK_CENTER","OPERATION","ORDER","OTHER"]
+		}   
+	]
+}
