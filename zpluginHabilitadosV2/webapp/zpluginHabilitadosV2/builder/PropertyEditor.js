@@ -19,11 +19,12 @@ sap.ui.define([
 		addPropertyEditorContent: function(oPropertyFormContainer){
 			var oData = this.getPropertyData();
 			
-			this.addSwitch(oPropertyFormContainer, "backButtonVisible", oData);
-			this.addSwitch(oPropertyFormContainer, "closeButtonVisible", oData);
+			// this.addSwitch(oPropertyFormContainer, "backButtonVisible", oData);
+			// this.addSwitch(oPropertyFormContainer, "closeButtonVisible", oData);
 						
-			this.addInputField(oPropertyFormContainer, "title", oData);
-			this.addInputField(oPropertyFormContainer, "text", oData);
+			// this.addInputField(oPropertyFormContainer, "title", oData);
+			// this.addInputField(oPropertyFormContainer, "text", oData);
+			this.addInputField(oPropertyFormContainer, "Mandante", oData);
 
             oFormContainer = oPropertyFormContainer;
 		},
@@ -31,10 +32,9 @@ sap.ui.define([
 		getDefaultPropertyData: function(){
 			return {
 				
-				"backButtonVisible": true,
-				"closeButtonVisible": true,
                 "title": "zpluginHabilitadosV2",
-				"text": "zpluginHabilitadosV2"
+				"text": "zpluginHabilitadosV2",
+                "Mandante": "100"
                 
 			};
 		}

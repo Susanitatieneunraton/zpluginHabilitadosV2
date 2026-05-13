@@ -1,37 +1,236 @@
-<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:l="sap.ui.layout" xmlns:f="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:html="http://www.w3.org/1999/xhtml" controllerName="serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.controller.MainView" width="100%" height="100%">
+<mvc:View
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout"
+    xmlns:t="sap.ui.table"
+    xmlns:f="sap.f"
+    xmlns:core="sap.ui.core"
+    xmlns:mdc="sap.ui.mdc"
+    xmlns:ndc="sap.ndc"
+    xmlns:card="sap.f.cards"
+    xmlns:m="sap.m"
+    xmlns:u="sap.ui.unified"
+    xmlns:html="http://www.w3.org/1999/xhtml"
+    controllerName="serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.controller.MainView"
+    width="100%"
+    height="100%"
+>
+    <FlexBox
+    alignItems="Center"
+    justifyContent="Center"
+    class="sapUiTinyMarginBegin sapUiTinyMarginTop"
+    width="100%">
+        <f:Card
+            width="auto"
+            height="auto"
+            class="sapUiTinyMargin">
+            <f:header>
+                <card:Header title="Resumen de operación"/>
+            </f:header>
+            <f:content>
+                <VBox>
+
+                    <HBox alignItems="Center">
+                        <Text text="Escaneo:" class="sapUiTinyMargin"/>
+                        <Input
+                            width="150px"
+                            id="scannerInput"
+                            liveChange=".onLiveChange"
+                            submit=".onScanSubmit"
+                            class="sapUiTinyMarginEnd"
+                        />
+                        <Text text="Proyecto:" class="sapUiTinyMargin"/>
+                        <Text text="{resumen>/Proyecto}" class="sapUiTinyMarginEnd"/>
+
+                        <Text text="Operación:" class="sapUiTinyMargin"/>
+                        <Text text="{resumen>/Operacion}" class="sapUiTinyMarginEnd"/>
+
+                        <Text text="Orden:" class="sapUiTinyMargin"/>
+                        <Text text="{resumen>/Orden}" class="sapUiTinyMarginEnd" id="orden"/>
+						
+                        <Text text="" class="sapUiTinyMarginEnd" id="sfc" visible="false"/>
+                    </HBox>
+
+                </VBox>
+            </f:content>
+        </f:Card>
 		
-        <Panel 
-                id="panelPlugin"  
-                width="100%"
-                height="100%"
-                expandable="false"
-                expanded="false"
-                accessibleRole="Region"
-                backgroundDesign="Transparent"
-                class="sapUiNoContentPadding">  
-        <headerToolbar>
-            <Toolbar height="3rem">
-                <Button
-                    id="backButton"
-                    visible="false"
-                    text="{i18n>template.back.btn}"
-                    tooltip="{i18n>template.back.tooltip}"
-                    icon="sap-icon://nav-back"
-                    press="onBackPress"/>
-                <Title id="headerTitle" text=""/>
-                <ToolbarSpacer/>
-                <Button
-                    id="closeButton"
-                    visible="false"
-                    tooltip="{i18n>template.close.tooltip}"
-                    icon="sap-icon://decline"
-                    press="onClosePress"/>
-            </Toolbar>
-        </headerToolbar>
-        <content> 
-            <Text id="textPlugin" text="template" class="textFontSize" textAlign="Center" width="100%"/>
+		<Button
+			class="sapUiLargeMarginBegin"
+			text="Log In/Log Out"
+			type="Accept"
+			icon="sap-icon://visits" 
+			press="scanLog" 
+		/>
+    </FlexBox>
+    <Panel
+        id="panelPlugin"
+        width="100%"
+        height="100%"
+        expandable="false"
+        expanded="false"
+        accessibleRole="Region"
+        backgroundDesign="Transparent"
+        class="sapUiNoContentPadding"
+    >
+        <content>
+            <FlexBox
+				wrap="Wrap"
+				justifyContent="Center"
+				alignItems="Center">
+                <VBox alignItems="Center" class="sapUiTinyMargin">
+					<Table
+					busyIndicatorDelay="10"
+					class="sapUiTinyMargin"
+					sticky="ColumnHeaders,HeaderToolbar"
+					popinLayout="GridSmall"
+					id="HABILITADOS_TABLE"
+					mode="None"
+					alternateRowColors="true"
+					items="{
+						path: '/ITEMS'				
+					}"
+					growing="true"
+					growingThreshold="500"
+					>
+						<columns>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="No.Plano" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Figura" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Cantidad Total" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Cantidad Notificada" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Cantidad Pendiente" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Acciones" />
+							</Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+                                <cells>
+                                    <Text text="{NoPlano}" />
+                                    <Text text="{Figura}" />
+                                    <Text text="{CantidadPlan}" />
+                                    <Text text="{CantidadBuena}" />
+                                    <Text text="{cantidadPendiente}" />
+                                    <HBox>
+                                        <Button
+                                            class="sapUiTinyMarginBegin"
+                                            type="Emphasized"
+                                            icon="sap-icon://sys-add" 
+                                            press=".onSumar"
+                                        />
+                                        <Button
+                                            class="sapUiTinyMarginBegin"
+                                            type="Emphasized"
+                                            icon="sap-icon://sys-minus" 
+                                            press=".onRestar" 
+                                        />
+                                    </HBox>
+                                </cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</VBox>
+			</FlexBox>
+            <FlexBox
+				wrap="Wrap"
+				justifyContent="Center"
+				alignItems="Center">
+                <VBox alignItems="Center" class="sapUiTinyMargin">
+					<Table
+					busyIndicatorDelay="10"
+					class="sapUiTinyMargin"
+					sticky="ColumnHeaders,HeaderToolbar"
+					popinLayout="GridSmall"
+					id="HABILITADOS_TABLE_PUESTO"
+					mode="None"
+					alternateRowColors="true"
+					items="{
+						path: '/puestos'				
+					}"
+					growing="true"
+					growingThreshold="500"
+					>
+						<columns>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Puesto de trabajo" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Estatus" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Usuario" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
+								<Label text="Fecha Inicio" />
+							</Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+                                <cells>
+                                    <Text text="{puesto}" />
+                                    <ObjectStatus
+                                        class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                        text="{estatus}"
+                                        inverted="{= ${estatus} === 'INICIADO' }"
+                                        state="{= ${estatus} === 'INICIADO' ? 'Success' : 'None' }" />
+                                    <Text text="{usuario}" />
+                                    <Text text="{inicio}" />
+                                </cells>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</VBox>
+			</FlexBox>
         </content>
-	    </Panel>		
-        
-  
+    </Panel>
 </mvc:View>
