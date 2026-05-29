@@ -1,0 +1,137 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core" 
+    xmlns:l="sap.ui.layout" 
+    xmlns:f="sap.ui.layout.form"
+    xmlns:ndc="sap.ndc">
+
+    <Dialog
+        id="Consumos"
+        title="Consumos"
+        stretch="true"
+        showHeader="true">
+
+        <customHeader>
+            <Bar>
+                <contentLeft>
+                    <Button
+                        icon="sap-icon://nav-back"
+                        press=".onCerrarConsumos"/>
+                </contentLeft>
+                <contentMiddle>
+                    <Title text="Escaneo de consumos"/>
+                </contentMiddle>
+            </Bar>
+        </customHeader>
+        <content>
+            <!-- header -->
+            <HBox width="97%" class="sapUiSmallMarginBottom" alignItems="Center">
+              <MessageStrip text="El scanner está listo" type="Information" showIcon="true"
+                customIcon="sap-icon://bar-code" class="sapUiSmallMarginTop sapUiSmallMarginBeginEnd sapUiSmallMarginBottom" />
+                <Text text="" id="operacionActividad" visible="false"/>
+                <Text text="" id="bom" visible="false"/>
+                <Text text="" id="puesto" visible="false"/>
+                <Label text="{i18n>Barcode}" class="sapUiSmallMarginEnd"/>
+                <Input id="scanInputConsumo" submit=".onBarcodeSubmit" liveChange=".onScanLiveupdate" class="sapUiSmallMarginEnd sapUiSmallMarginBeginEnd" width="300px"/>
+                <ndc:BarcodeScannerButton
+                    id="sampleBarcodeScannerButton"
+                    scanSuccess="onScanSuccess"
+                    scanFail="onScanError"
+                    inputLiveUpdate="onScanLiveupdate"
+                    dialogTitle="{i18n>BarcodeScanner}"
+                    class="sapUiMediumMarginBegin sapUiSmallMarginEnd"
+                    visible="false"
+                />
+            </HBox>
+
+            <!-- Resumen de orden -->
+            <HBox width="97%" justifyContent="Center" class="sapUiSmallMarginTop sapUiSmallMarginBeginEnd">
+            <Table busyIndicatorDelay="5" id="idSummaryTable" items="{/componentes}"
+                class="sapUiSmallMarginTop" width="100%" alternateRowColors="true">
+                <headerToolbar>
+                    <Toolbar >
+                        <Title text="Componentes"/>
+                    </Toolbar>
+                </headerToolbar>
+                <columns>
+                    <Column width="20%" hAlign="Left" vAlign="Middle" >
+                        <Text text="Material" />
+                    </Column>
+                    <Column width="30%" hAlign="Left" vAlign="Middle" >
+                        <Text text="Descripción" />
+                    </Column>
+                    <Column width="5%" hAlign="Left" vAlign="Middle" >
+                        <Text text="UM"  />
+                    </Column>
+                    <Column width="15%" hAlign="Left" vAlign="Middle" >
+                        <Text text="Cantidad necesaria" />
+                    </Column>
+                    <Column width="15%" hAlign="Left" vAlign="Middle" >
+                        <Text text="Cantidad consumida" />
+                    </Column>
+                    <Column width="10%" hAlign="Center" vAlign="Middle">
+                        <Text text="Cantidad pendiente"/>
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem vAlign="Middle">
+                        <cells>
+                            <Text text="{material}" />
+                            <Text text="{descripcion}" />
+                            <Text text="{uom}"/>
+                            <Text text="{cantidadNecesaria}" />
+                            <Text text="{cantidadConsumida}" />
+                            <Text text="{cantidadPendiente}" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+            </HBox> 
+
+            <!-- tabla de lotes -->
+            <HBox width="97%" justifyContent="Center" class="sapUiSmallMarginTop sapUiSmallMarginBeginEnd">
+            <Table busyIndicatorDelay="5" id="idSlotTable" items="{/escaneos}"
+                class="sapUiSmallMarginTop" width="100%" alternateRowColors="true" mode="SingleSelect">
+                <headerToolbar>
+                    <Toolbar >
+                        <Title text="{i18n>Items} ({= ${/escaneos}.length})" />
+                        <ToolbarSpacer />
+                        <Button id="consumos" text="Consumo" press="onConsumo" 
+                        width="100px" class="sapUiSmallMarginBeginEnd" icon="sap-icon://add-coursebook" type="Accept"/>
+                        <Button id="refreshBoton" text="{i18n>refresh}" press="onCargarCv" 
+                        width="100px" class="sapUiSmallMarginBeginEnd" icon="sap-icon://refresh" type="Emphasized"/>
+                    </Toolbar>
+                </headerToolbar>
+                <columns>
+                    <Column width="30%" hAlign="Left" vAlign="Middle" >
+                        <Text text="Material" />
+                    </Column>
+                    <Column width="30%" hAlign="Left" vAlign="Middle" >
+                        <Text text="Lote"  />
+                    </Column>
+                    <Column width="15%" hAlign="Left" vAlign="Middle" >
+                        <Text text="Cantidad de lote" />
+                    </Column>
+                    <Column width="10%" hAlign="Center" vAlign="Middle">
+                        <Text text="Cantidad Asignada" />
+                    </Column>
+                    <Column width="10%" hAlign="Center" vAlign="Middle">
+                        <Text text="Eliminar" visible="false" />
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem vAlign="Middle">
+                        <cells>
+                            <Input value="{Material}" enabled="false" />
+                            <Input value="{Lote}" enabled="false" />
+                            <ObjectAttribute text="{loteQty} {loteUom}" />
+                            <Input value="{cantidadAsignada}" enabled="true" type="Number" width="100px"/>
+                            <Button icon="sap-icon://delete" press=".onDeleteSlot" type="Reject"/>
+                        </cells> 
+                    </ColumnListItem>
+                </items>
+            </Table>
+            </HBox>
+        </content>
+    </Dialog>
+</core:FragmentDefinition>

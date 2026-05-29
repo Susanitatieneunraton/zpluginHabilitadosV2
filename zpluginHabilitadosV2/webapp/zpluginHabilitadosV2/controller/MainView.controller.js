@@ -1,7 +1,7 @@
 sap.ui.define([
     'jquery.sap.global',
-	"sap/dm/dme/podfoundation/controller/PluginViewController",
-	"sap/ui/model/json/JSONModel",
+    "sap/dm/dme/podfoundation/controller/PluginViewController",
+    "sap/ui/model/json/JSONModel",
     "sap/ui/core/IconPool",
     "sap/m/Dialog",
     "sap/m/Button",
@@ -16,52 +16,61 @@ sap.ui.define([
     'sap/ui/core/BusyIndicator',
     "sap/ui/model/Sorter",
     "sap/ui/core/Fragment",
-], function (jQuery, PluginViewController, JSONModel, IconPool, Dialog, Button, mobileLibrary, List, StandardListItem, Text, MessageToast, Filter, MessageBox, FilterOperator, BusyIndicator, Sorter,Fragment) {
-	"use strict";
+], function (jQuery, PluginViewController, JSONModel, IconPool, Dialog, Button, mobileLibrary, List, StandardListItem, Text, MessageToast, Filter, MessageBox, FilterOperator, BusyIndicator, Sorter, Fragment) {
+    "use strict";
     var ButtonType = mobileLibrary.ButtonType;
     const FORMATO = "";
 
-	return PluginViewController.extend("serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.controller.MainView", {
-		onInit: function () {
-			PluginViewController.prototype.onInit.apply(this, arguments);
-			this._scanTimeout = null;
+    return PluginViewController.extend("serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.controller.MainView", {
+
+        onInit: function () {
+            PluginViewController.prototype.onInit.apply(this, arguments);
+            this._scanTimeout = null;
+            this._ultimoScan = null;
+            this._oModel = new sap.ui.model.json.JSONModel({
+                componentes: [],
+                escaneos: []
+            });
+            this.getView().setModel(this._oModel);
+            this._oModel.setProperty("/componentes", []);
+            this._oModel.setProperty("/escaneos", []);
 
             document.addEventListener("click", () => {
                 this._focusScanner();
             });
-			         
-		},
-
-
-
-
-        onAfterRendering: function(){
-           this._focusScanner();
-           let data = "";
-           this.cargarTablaPuesto(data);
 
         },
 
-		onBeforeRenderingPlugin: function () {
 
-			
-			
-		},
 
-        isSubscribingToNotifications: function() {
-            
+
+        onAfterRendering: function () {
+            this._focusScanner();
+            let data = "";
+            this.cargarTablaPuesto(data);
+
+        },
+
+        onBeforeRenderingPlugin: function () {
+
+
+
+        },
+
+        isSubscribingToNotifications: function () {
+
             var bNotificationsEnabled = true;
-           
+
             return bNotificationsEnabled;
         },
 
 
-        getCustomNotificationEvents: function(sTopic) {
+        getCustomNotificationEvents: function (sTopic) {
             //return ["template"];
         },
 
 
-        getNotificationMessageHandler: function(sTopic) {
+        getNotificationMessageHandler: function (sTopic) {
 
             //if (sTopic === "template") {
             //    return this._handleNotificationMessage;
@@ -69,34 +78,34 @@ sap.ui.define([
             return null;
         },
 
-        _handleNotificationMessage: function(oMsg) {
-           
+        _handleNotificationMessage: function (oMsg) {
+
             var sMessage = "Message not found in payload 'message' property";
             if (oMsg && oMsg.parameters && oMsg.parameters.length > 0) {
                 for (var i = 0; i < oMsg.parameters.length; i++) {
 
-                    switch (oMsg.parameters[i].name){
+                    switch (oMsg.parameters[i].name) {
                         case "template":
-                            
+
                             break;
                         case "template2":
-                            
-                        
-                        }        
-          
 
-                    
+
+                    }
+
+
+
                 }
             }
 
         },
-        
-
-		onExit: function () {
-			PluginViewController.prototype.onExit.apply(this, arguments);
 
 
-		},
+        onExit: function () {
+            PluginViewController.prototype.onExit.apply(this, arguments);
+
+
+        },
 
         // Lógica de plugin
 
@@ -152,16 +161,29 @@ sap.ui.define([
             const partes = limpio.split("!").filter(Boolean);
             if (partes.length === 3 && limpio.endsWith("!")) {
                 const [orden, operacion, valor] = partes;
+                const operacionFormateada = operacion.padStart(4, "0");
                 if (/^\d+$/.test(valor)) {
+                    this._ultimoScan = {
+                        tipo: "PLANO",
+                        orden,
+                        operacion: operacionFormateada,
+                        plano: valor
+                    };
                     this._procesarScanOrden({
                         orden,
-                        operacion,
+                        operacion: operacionFormateada,
                         plano: valor
                     });
                 } else {
+                    this._ultimoScan = {
+                        tipo: "FIGURA",
+                        orden,
+                        operacion: operacionFormateada,
+                        figura: valor
+                    };
                     this._procesarScanFigura({
                         orden,
-                        operacion,
+                        operacion: operacionFormateada,
                         figura: valor
                     });
                 }
@@ -330,7 +352,7 @@ sap.ui.define([
         },
         generarResumen: function (aData) {
             var oThis = this;
-            let planta = this.getPodController().getUserPlant();      
+            let planta = this.getPodController().getUserPlant();
             if (!aData || aData.length === 0) {
                 return;
             }
@@ -360,19 +382,19 @@ sap.ui.define([
             oResumen.Puestos = Object.keys(oOrdenUnico).join(", ");
             var oModelResumen = new sap.ui.model.json.JSONModel(oResumen);
             this.getView().setModel(oModelResumen, "resumen");
-                let requestJSON = {
-                    "plant": planta,
-                    "order": orden
-                };
-                let url = this.getPublicApiRestDataSourceUri() + "order/v1/orders?async=false";
-                this.ajaxGetRequest(url, requestJSON,
-                    function (oResponseData) {
-                        oThis.byId("sfc").setText(oResponseData.sfcs[0])
-                    },
-                    function (oError, sHttpErrorMessage) {
-                        var err = oError || sHttpErrorMessage;
-                        MessageToast.show(err);
-                    })
+            let requestJSON = {
+                "plant": planta,
+                "order": orden
+            };
+            let url = this.getPublicApiRestDataSourceUri() + "order/v1/orders?async=false";
+            this.ajaxGetRequest(url, requestJSON,
+                function (oResponseData) {
+                    oThis.byId("sfc").setText(oResponseData.sfcs[0])
+                },
+                function (oError, sHttpErrorMessage) {
+                    var err = oError || sHttpErrorMessage;
+                    MessageToast.show(err);
+                })
         },
         cargarTablaPuesto: function (data) {
             let mandante = this.getConfiguration().Mandante;
@@ -383,10 +405,10 @@ sap.ui.define([
                 oItems = { puestos: [] };
             var oTable = oView.byId("HABILITADOS_TABLE_PUESTO");
             var requestJSON = {
-                "inPlanta" : planta,
-                "inUsuario" : usuario,
-                "inPuesto" : workCenter,
-                "inMandante" : mandante
+                "inPlanta": planta,
+                "inUsuario": usuario,
+                "inPuesto": workCenter,
+                "inMandante": mandante
             };
 
             var url = this.getPublicApiRestDataSourceUri() +
@@ -401,8 +423,8 @@ sap.ui.define([
                                 raw = "[" + raw + "]";
                             }
                             let data = JSON.parse(raw);
-                            data.forEach(function(item){
-                                if(item.usuario && item.usuario.includes("!")){
+                            data.forEach(function (item) {
+                                if (item.usuario && item.usuario.includes("!")) {
                                     let parts = item.usuario.split("!");
                                     item.usuario = parts[0] + " " + parts[1];
                                     item.userId = parts[2] || "";
@@ -439,7 +461,7 @@ sap.ui.define([
             var oCustomSorter = new Sorter("Status", bDescending, false, this.customSorter);
             oBinding.sort([oCustomSorter]);
         },
-        onSumar: function(oEvent) {
+        onSumar: function (oEvent) {
             const oContext = oEvent.getSource().getBindingContext();
             let value = oContext.getProperty("cantidadPendiente") || 0;
             let cantNoti = oContext.getProperty("cantidadNotificada") || 0;
@@ -447,8 +469,8 @@ sap.ui.define([
             oContext.getModel().setProperty(oContext.getPath() + "/cantidadPendiente", value + 1);
         },
 
-        onRestar: function(oEvent) {
-            
+        onRestar: function (oEvent) {
+
             const oContext = oEvent.getSource().getBindingContext();
             const oModel = oContext.getModel();
             const sPath = oContext.getPath();
@@ -471,27 +493,227 @@ sap.ui.define([
             });
             var sEstatus = oMatch ? oMatch.estatus : null;
             let mensaje = "";
-            if(sEstatus === "SIN INICIAR"){
+            if (sEstatus === "SIN INICIAR") {
                 mensaje = "¿Desea iniciar tiempos?"
             } else {
                 mensaje = "¿Desea finalizar tiempos?"
             }
-                MessageBox.warning(mensaje, {
+            MessageBox.warning(mensaje, {
                 actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
                 emphasizedAction: MessageBox.Action.OK,
                 onClose: function (sAction) {
                     if (sAction === MessageBox.Action.OK) {
-                        if(sEstatus === "SIN INICIAR"){
+                        if (sEstatus === "SIN INICIAR") {
                             this.IniciarFigura(data);
-                        }else{
-                        this.EnviarFiguras(data);
+                        } else {
+                            this.ValidaOrden(data);
                         }
                     }
                 }.bind(this),
                 dependentOn: this.getView()
             });
         },
-        EnviarFiguras: function (data) {
+        ValidaOrden: async function (data) {
+            let orden = this.byId("orden").getText();
+            let planta = this.getPodController().getUserPlant();
+            let sPathOrder =
+                "routing/v1/routings/routingSteps";
+            let requestJSON = {
+                "routing": orden,
+                "plant": planta,
+                "type": "SHOP_ORDER"
+            };
+            let url =
+                this.getPublicApiRestDataSourceUri() +
+                sPathOrder +
+                "?async=false";
+            this.ajaxGetRequest(
+                url,
+                requestJSON,
+                async function (oResponseData) {
+                    let oStep =
+                        oResponseData.routingSteps.find(
+                            function (item) {
+                                return item.workCenter &&
+                                    item.workCenter.workCenter ===
+                                    data.puesto;
+                            }
+                        );
+                    if (!oStep) {
+                        MessageToast.show(
+                            "No se encontró un step para el puesto " +
+                            data.puesto
+                        );
+                        return;
+                    }
+                    let stepId = oStep.stepId;
+                    if (
+                            stepId.endsWith("0010") ||
+                            stepId.endsWith("0020") ||
+                            stepId.endsWith("0030")
+                        ) {
+                        let valido =
+                            await this.validarConsumos(
+                                orden,
+                                planta
+                            );
+                        if (!valido) {
+                            return;
+                        }
+                    }
+                    let operacion =
+                        oStep.routingOperation &&
+                        oStep.routingOperation
+                            .operationActivity &&
+                        oStep.routingOperation
+                            .operationActivity
+                            .operationActivity;
+                    this.EnviarFiguras(
+                        stepId,
+                        operacion,
+                        data
+                    );
+                }.bind(this),
+                function (oError, sHttpErrorMessage) {
+                    var err =
+                        oError || sHttpErrorMessage;
+                    MessageToast.show(err);
+                }
+            );
+        },
+        validarConsumos: async function (orden, planta) {
+            let oTable = this.byId("HABILITADOS_TABLE");
+            var oBinding = oTable.getBinding("items");
+            var aContexts = oBinding.getContexts();
+            var grupos = {};
+            aContexts.forEach(function (oContext) {
+                var item = oContext.getObject();
+                var cantidadPendiente =
+                    Number(item.cantidadPendiente || 0);
+                var cantidadPlan =
+                    Number(item.CantidadPlan || 0);
+                var key =
+                    item.Figura + "_" + item.NoPlano;
+                if (!grupos[key]) {
+                    grupos[key] = {
+                        Figura: item.Figura,
+                        NoPlano: item.NoPlano,
+                        CantidadPendiente: 0,
+                        CantidadPlan: 0,
+                        materiales: {}
+                    };
+                }
+                grupos[key].CantidadPendiente +=
+                    cantidadPendiente;
+                grupos[key].CantidadPlan +=
+                    cantidadPlan;
+                for (var i = 1; i <= 15; i++) {
+                    var matKey = "Zmatprim" + i;
+                    var totKey = "Zmatprim" + i + "tot";
+                    var material = item[matKey];
+                    var total =
+                        Number(item[totKey] || 0);
+                    if (
+                        material &&
+                        material !== "" &&
+                        total > 0 &&
+                        !grupos[key]
+                            .materiales[material]
+                    ) {
+                        grupos[key]
+                            .materiales[material] = total;
+                    }
+                }
+            });
+            var resultado = {};
+            Object.keys(grupos).forEach(function(key) {
+                var grupo = grupos[key];
+                var cantidadPendiente =
+                    grupo.CantidadPendiente;
+                var cantidadPlan =
+                    grupo.CantidadPlan;
+                Object.keys(grupo.materiales)
+                    .forEach(function(material) {
+                        var total =
+                            grupo.materiales[material];
+                        var consumoProximo =
+                            (total / cantidadPlan) *
+                            cantidadPendiente;
+                        if (!resultado[material]) {
+                            resultado[material] = {
+                                Material: material,
+                                consumo_proximo: 0
+                            };
+                        }
+                        resultado[material]
+                            .consumo_proximo +=
+                            consumoProximo;
+                    });
+            });
+            var salida = [];
+            Object.keys(resultado).forEach(function(material) {
+                salida.push({
+                    Material: material,
+                    consumo_proximo: Number(
+                        resultado[material]
+                            .consumo_proximo
+                            .toFixed(3)
+                    )
+                });
+            });
+            var sTabla = JSON.stringify(salida);
+            let mandante = this.getConfiguration().Mandante;
+            var requestJSON = {
+                "inMandante": mandante,
+                "inOperacion": this.byId("operacion").getText(),
+                "inOrden": orden,
+                "inPlant": planta,
+                "inProxConsumo": sTabla
+            };
+            var url = this.getPublicApiRestDataSourceUri() +
+                "/pe/api/v1/process/processDefinitions/start?key=REG_2c0a25e7-20cd-4069-bf97-370bf8bf6f2c&async=false";
+            try {
+                var oResponseData = await new Promise(
+                    function (resolve, reject) {
+                        this.ajaxPostRequest(
+                            url,
+                            requestJSON,
+                            function (response) {
+                                resolve(response);
+                            },
+                            function (oError, sHttpErrorMessage) {
+                                reject(oError || sHttpErrorMessage);
+                            }
+                        );
+                    }.bind(this)
+                );
+                var evaluacion =
+                    JSON.parse(
+                        oResponseData.outEval || "[]"
+                    );
+
+                var tieneError = false;
+                var mensajes = [];
+                for (var i = 0; i < evaluacion.length; i++) {
+                    var item = evaluacion[i];
+                    if (item.error === true) {
+                        tieneError = true;
+                        mensajes.push(item.mensaje);
+                    }
+                }
+                if (tieneError) {
+                    MessageBox.error(
+                        mensajes.join("\n")
+                    );
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                MessageBox.error(error);
+                return false;
+            }
+        },
+        EnviarFiguras: function (stepId, operacion, data) {
             let workCenter = data.puesto;
             const oView = this.getView();
             var oTable2 = oView.byId("HABILITADOS_TABLE_PUESTO");
@@ -508,12 +730,12 @@ sap.ui.define([
             var oThis = this;
             let mandante = this.getConfiguration().Mandante;
             let planta = this.getPodController().getUserPlant();
-            
+
             var oTable = oView.byId("HABILITADOS_TABLE");
             var oBinding = oTable.getBinding("items");
             var aContexts = oBinding.getContexts();
             var aData = aContexts
-                .map(function(oContext) {
+                .map(function (oContext) {
                     var item = oContext.getObject();
                     var cantidadPendiente = +item.cantidadPendiente || 0;
                     var cantidadPlan = +item.CantidadPlan || 0;
@@ -526,7 +748,7 @@ sap.ui.define([
                     };
 
                 })
-                .filter(function(item) {
+                .filter(function (item) {
                     return (+item.cantidadPendiente || 0) > 0;
                 });
 
@@ -542,8 +764,10 @@ sap.ui.define([
                 "inUsuario": usuario2,
                 "inUsuarioN": usuario2,
                 "inMandante": mandante,
-                "inSfc" : this.byId("sfc").getText(),
-                "inOrden": this.byId("orden").getText()
+                "inSfc": this.byId("sfc").getText(),
+                "inOrden": this.byId("orden").getText(),
+                "inOperacion": operacion,
+                "inStepId": stepId,
             };
 
             var url = this.getPublicApiRestDataSourceUri() +
@@ -555,6 +779,14 @@ sap.ui.define([
                     function (oResponseData) {
                         let data = "";
                         oThis.cargarTablaPuesto(data);
+                        if (oThis._ultimoScan) {
+                            if (oThis._ultimoScan.tipo === "PLANO") {
+                                oThis.cargarTabla(oThis._ultimoScan);
+                            } else if (oThis._ultimoScan.tipo === "FIGURA") {
+                                oThis.cargarTablaFig(oThis._ultimoScan);
+                            }
+                        }
+                        MessageToast.show(oResponseData.outMessage || "Se enviaron los tiempos correctamente");
                     },
                     function (oError, sHttpErrorMessage) {
                         var err = oError || sHttpErrorMessage;
@@ -578,7 +810,7 @@ sap.ui.define([
             });
             var sEstatus = oMatch ? oMatch.estatus : null;
             var oThis = this;
-            let planta = this.getPodController().getUserPlant();            
+            let planta = this.getPodController().getUserPlant();
 
             var requestJSON = {
                 "inEstatus": sEstatus,
@@ -596,6 +828,17 @@ sap.ui.define([
                     function (oResponseData) {
                         let data = "";
                         oThis.cargarTablaPuesto(data);
+                        var oTable = oThis.byId("HABILITADOS_TABLE");
+                        oTable.setModel(
+                            new sap.ui.model.json.JSONModel({
+                                ITEMS: []
+                            })
+                        );
+                        var oModelResumen = oThis.getView().getModel("resumen");
+                        if (oModelResumen) {
+                            oModelResumen.setData({});
+                        }
+                        MessageToast.show(oResponseData.outMessage || "Se iniciaron los tiempos correctamente");
                     },
                     function (oError, sHttpErrorMessage) {
                         var err = oError || sHttpErrorMessage;
@@ -654,6 +897,7 @@ sap.ui.define([
                     function (oResponseData) {
                         let data = "";
                         oThis.cargarTablaPuesto(data);
+                        MessageToast.show(oResponseData.outMessage || "Sesión registrada correctamente");
                     },
                     function (oError, sHttpErrorMessage) {
                         var err = oError || sHttpErrorMessage;
@@ -765,5 +1009,322 @@ sap.ui.define([
             this.oDefaultDialog.open();
         },
 
-	});
+        // Logica Fragment Escaneo
+        AbreConsumos: async function () {
+            var order = this.byId("orden").getText();
+            if (!order) {
+                MessageToast.show("No hay orden seleccionada");
+                return;
+            }
+            if (!this._oDialogConsumos) {
+                this._oDialogConsumos = await Fragment.load({
+                    id: this.getView().getId(),
+                    name: "serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.fragments.Consumos",
+                    controller: this
+                });
+                this.getView().addDependent(this._oDialogConsumos);
+                this._oDialogConsumos.setModel(this._oModel);
+            }
+            this._oDialogConsumos.open();
+            this.oScanInput = this.byId("scanInputConsumo");
+            if (this.oScanInput) {
+                this.oScanInput.focus();
+            }
+            this.onCargarConsumos();
+        },
+        onCerrarConsumos: function () {
+            this._oDialogConsumos.close();
+        },
+        onScanLiveupdate: function (oEvent) {
+            var oThis = this;
+            var orden = this.byId("orden").getText() || "1000884";
+            var operacion = this.byId("operacionActividad").getText() || "1000884-0-0010";
+            var planta = this.getPodController().getUserPlant();          
+            var url = this.getPublicApiRestDataSourceUri() +
+            "/pe/api/v1/process/processDefinitions/start?key=REG_ea2930be-d3c5-4f09-884e-949542075622&async=false";
+
+            var sValor = (oEvent.getParameter("value") || "")
+                .replace(/\r?\n/g, "")
+                .trim();
+            if (!sValor.includes("!")) {
+                return;
+            }
+            var [sMaterial, sLote] = sValor.split("!");
+            var aComponentes = this._oModel.getProperty("/componentes") || [];
+            var oComponente = aComponentes.find(function (oItem) {
+                return oItem.material === sMaterial;
+            });
+            let requestJSON = {
+                planta: planta,
+                orden: orden,
+                lote : sLote,
+                material : sMaterial,
+                operacion : operacion
+            };
+            if (oComponente) {
+            try {
+
+                this.ajaxPostRequest(url, requestJSON,
+                    function (oResponseData) {
+                        if(oResponseData.outError){
+                            MessageBox.error(oResponseData.outMessage || "Error al registrar lote");
+                        }else{
+                           MessageBox.success(oResponseData.outMessage || "Lote registrado correctamente"); 
+                        }
+                        oThis.onCargarCv(operacion);
+                        oThis.oScanInput.setValue("");
+                    },
+                    function (oError, sHttpErrorMessage) {
+                        var err = oError || sHttpErrorMessage;
+                        MessageToast.show(err);
+                    });
+
+            } catch (error) {
+                MessageBox.error(that.getView().getModel("i18n").getResourceBundle().getText("mensajeErrorGenerico"));
+            }
+            } else {
+                MessageToast.show("El material no existe en la lista");
+            }
+        },
+        onCargarConsumos: function (oEvent) {
+            var orden = this.byId("orden").getText() || "1000884";
+            var operacion = this.byId("operacion").getText() || "1000884";
+            var oThis = this;
+            let planta = this.getPodController().getUserPlant();
+            var publicApiUri = this.getPublicApiRestDataSourceUri();
+            let requestJSON = {
+                plant: planta,
+                order: orden
+            };
+            let url = publicApiUri + "order/v1/orders?async=false";
+            this.ajaxGetRequest(
+                url,
+                requestJSON,
+                function (oOrderData) {
+                    let sfc = oOrderData.sfcs?.[0] || "";
+                    let bom = oOrderData.bom?.bom || "";
+                    let requestJSON2 = {
+                        plant: planta,
+                        bom: bom,
+                        type: "SHOP_ORDER"
+                    };
+                    oThis.byId("bom").setText(bom);
+                    let url2 = publicApiUri + "bom/v1/boms?async=false";
+                    oThis.ajaxGetRequest(
+                        url2,
+                        requestJSON2,
+                        function (oBomData) {
+                            let oBom = oBomData?.[0] || {};
+                            let aComponents = oBom.components || [];
+                            let operationSuffix = operacion;
+                            let oOperacion = aComponents.find(function (oComp) {
+                                let sOperation =
+                                    oComp.assemblyOperationActivity?.operationActivity || "";
+
+                                return sOperation.endsWith(operationSuffix);
+
+                            });
+                            let operationActivity =
+                                oOperacion?.assemblyOperationActivity?.operationActivity || "";
+                            oThis.byId("operacionActividad").setText(operationActivity);
+                            oThis.onCargarCv(operationActivity);
+                            let stepId = "";
+                            if (operationActivity) {
+                                stepId = operationActivity
+                                    .split("-")
+                                    .slice(1)
+                                    .join("-");
+                            }
+                            let requestJSON3 = {
+                                plant: planta,
+                                order: orden,
+                                sfc: sfc,
+                                operationActivity: operationActivity,
+                                stepId: stepId
+                            };
+                            let url3 =
+                                publicApiUri +
+                                "processorder/v2/goodsIssue/summary?async=false";
+                            oThis.ajaxGetRequest(
+                                url3,
+                                requestJSON3,
+
+                                function (oGoodsIssueData) {
+                                    var aComponentes = aComponents
+                                        .filter(function (oComp) {
+                                            var sOperation =
+                                            oComp.assemblyOperationActivity?.operationActivity || "";
+                                            return (
+                                                oComp.componentType === "NORMAL" &&
+                                                sOperation === operationActivity
+                                            );
+                                        })
+                                        .map(function (oComp) {
+                                            var fNecesaria =
+                                                Number(oComp.totalQuantity || 0);
+                                            return {
+                                                material:
+                                                    oComp.material?.material || "",
+                                                descripcion:
+                                                    oComp.material?.description || "",
+                                                uom:
+                                                    oComp.unitOfMeasure || "",
+
+                                                cantidadNecesaria:
+                                                    fNecesaria,
+                                                cantidadConsumida: 0,
+                                                cantidadEscaneada: 0,
+                                                cantidadPendiente:
+                                                    fNecesaria
+                                            };
+                                        });
+                                    aComponentes.forEach(function (oItem) {
+                                        let oConsumo =
+                                            oGoodsIssueData.lineItems.find(function (oCon) {
+                                                return (
+                                                    oCon.materialId?.material ===
+                                                    oItem.material
+                                                );
+                                            });
+                                        let fConsumida =
+                                            Number(
+                                                oConsumo?.consumedQuantity?.value || 0
+                                            );
+
+                                        oItem.cantidadConsumida =
+                                            fConsumida;
+
+                                        oItem.cantidadPendiente =
+                                            oItem.cantidadNecesaria -
+                                            fConsumida;
+
+                                    });
+                                    oThis._oModel.setProperty(
+                                        "/componentes",
+                                        aComponentes
+                                    );
+                                    console.log(aComponentes);
+                                },
+                                function (oError, sHttpErrorMessage) {
+                                    var err =
+                                        oError || sHttpErrorMessage;
+                                    MessageToast.show(err);
+                                }
+                            );
+                        },
+                        function (oError, sHttpErrorMessage) {
+                            var err =
+                                oError || sHttpErrorMessage;
+                            MessageToast.show(err);
+                        }
+                    );
+                },
+                function (oError, sHttpErrorMessage) {
+                    var err =
+                      oError || sHttpErrorMessage;
+                    MessageToast.show(err);
+                }
+            );
+        },
+        onCargarCv: function (operationActivity) {
+            var operacion = this.byId("operacionActividad").getText() || "1000884";
+            var oThis = this;
+            let planta = this.getPodController().getUserPlant();
+            var publicApiUri = this.getPublicApiRestDataSourceUri();
+            var hoy = new Date();
+            let requestJSON = {
+                "plant": planta,
+                "operationActivity": operacion
+            };
+            
+            var url = this.getPublicApiRestDataSourceUri() +
+            "/pe/api/v1/process/processDefinitions/start?key=REG_5eb450ec-0065-408b-a09b-a4c340666d14&async=false";
+                this.ajaxPostRequest(url, requestJSON,
+                    function (oResponseData) {
+                        if (oResponseData.outJson !== undefined) {
+                        let data = JSON.parse(oResponseData.outJson);
+                        oThis._oModel.setProperty("/escaneos", data);
+                    } else {
+                        oThis._oModel.setProperty("/escaneos", []);
+                    }
+                    },
+                    function (oError, sHttpErrorMessage) {
+                        var err = oError || sHttpErrorMessage;
+                        MessageToast.show(err);
+                    });
+        },
+        onConsumo: function () {
+            var oThis = this;
+            var oTable = this.byId("idSlotTable");
+            var oSelectedItem = oTable.getSelectedItem();
+            if (!oSelectedItem) {
+                sap.m.MessageToast.show("Seleccione un registro");
+                return;
+            }
+            var oContext = oSelectedItem.getBindingContext();
+            var oData = oContext.getObject();
+            var order = this.byId("orden").getText() || "1000884";
+            var operacion = this.byId("operacionActividad").getText() || "1000884";
+            var bom = this.byId("bom").getText() || "1000884";
+            var oThis = this;
+            let usuario = this.getPodController().getUserId();
+            let planta = this.getPodController().getUserPlant();
+            let workcenter = "";
+            if (operacion.endsWith("0010")) {
+                workcenter = "CC02";
+            } else if (operacion.endsWith("0020")) {
+                workcenter = "CO01";
+            } else if (operacion.endsWith("0030")) {
+                workcenter = "CM01";
+            }
+            let requestJSON = {
+                "Batch": oData.Lote,
+                "bom": bom,
+                "Cantidad": oData.cantidadAsignada,
+                "FechaActual": this.obtenerFechaActualconT(),
+                "Material": String(oData.Material).padStart(18, "0"),
+                "Order": order,
+                "Phase": operacion,
+                "Plant": planta,
+                "Uom": oData.loteUom,
+                "Usuario": usuario,
+                "WorkCenter": workcenter
+            };
+            
+            var url = this.getPublicApiRestDataSourceUri() +
+            "/pe/api/v1/process/processDefinitions/start?key=REG_a87c5744-3c8d-4781-ac9b-7ec1da958d12&async=false";
+                this.ajaxPostRequest(url, requestJSON,
+                    function (oResponseData) {
+                        oThis.onCargarCv(operacion);
+                        oThis.onCargarConsumos();
+                         MessageBox.success("Consumo registrado exitosamente");
+                    },
+                    function (oError, sHttpErrorMessage) {
+                        var err = oError || sHttpErrorMessage;
+                        MessageToast.show(oError.details.message || "Error al registrar consumo");
+                    });
+        },
+        obtenerFechaActualconT: function () {
+            var oFecha = new Date();
+            var year = oFecha.getFullYear();
+            var month = String(oFecha.getMonth() + 1)
+                .padStart(2, "0");
+            var day = String(oFecha.getDate())
+                .padStart(2, "0");
+            var hours = String(oFecha.getHours())
+                .padStart(2, "0");
+            var minutes = String(oFecha.getMinutes())
+                .padStart(2, "0");
+            var seconds = String(oFecha.getSeconds())
+                .padStart(2, "0");
+            return (
+                year + "-" +
+                month + "-" +
+                day + "T" +
+                hours + ":" +
+                minutes + ":" +
+                seconds
+            );
+        }
+    });
 });

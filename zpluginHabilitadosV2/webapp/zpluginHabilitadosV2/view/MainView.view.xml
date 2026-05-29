@@ -20,6 +20,15 @@
     justifyContent="Center"
     class="sapUiTinyMarginBegin sapUiTinyMarginTop"
     width="100%">
+		
+		<Button
+			class="sapUiLargeMarginEnd"
+			text="Consumos"
+			type="Accept"
+			icon="sap-icon://visits" 
+			press="AbreConsumos" 
+			enabled="{= ['0010','0020','0030'].includes(${resumen>/Operacion}) }"
+		/>
         <f:Card
             width="auto"
             height="auto"
@@ -43,7 +52,7 @@
                         <Text text="{resumen>/Proyecto}" class="sapUiTinyMarginEnd"/>
 
                         <Text text="Operación:" class="sapUiTinyMargin"/>
-                        <Text text="{resumen>/Operacion}" class="sapUiTinyMarginEnd"/>
+                        <Text text="{resumen>/Operacion}" class="sapUiTinyMarginEnd" id="operacion"/>
 
                         <Text text="Orden:" class="sapUiTinyMargin"/>
                         <Text text="{resumen>/Orden}" class="sapUiTinyMarginEnd" id="orden"/>
