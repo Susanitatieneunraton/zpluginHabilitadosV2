@@ -125,7 +125,8 @@
                             <Input value="{Material}" enabled="false" />
                             <Input value="{Lote}" enabled="false" />
                             <ObjectAttribute text="{loteQty} {loteUom}" />
-                            <Input value="{cantidadAsignada}" enabled="true" type="Number" width="100px"/>
+                            <!-- <Input value="{cantidadAsignada}" enabled="true" type="Number" width="100px"/> -->
+                            <Input value="0" enabled="true" type="Number" width="100px"/>
                             <Button icon="sap-icon://delete" press=".onDeleteSlot" type="Reject"/>
                         </cells> 
                     </ColumnListItem>

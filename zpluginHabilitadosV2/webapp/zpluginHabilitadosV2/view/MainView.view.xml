@@ -28,6 +28,8 @@
 			icon="sap-icon://visits" 
 			press="AbreConsumos" 
 			enabled="{= ['0010','0020','0030'].includes(${resumen>/Operacion}) }"
+			visible="{= ['0010','0020','0030'].includes(${resumen>/Operacion}) }"
+			
 		/>
         <f:Card
             width="auto"
@@ -58,6 +60,7 @@
                         <Text text="{resumen>/Orden}" class="sapUiTinyMarginEnd" id="orden"/>
 						
                         <Text text="" class="sapUiTinyMarginEnd" id="sfc" visible="false"/>
+                        <Text text="" class="sapUiTinyMarginEnd" id="ordenPadre" visible="false"/>
                     </HBox>
 
                 </VBox>
@@ -102,6 +105,42 @@
 					growing="true"
 					growingThreshold="500"
 					>
+					
+                <headerToolbar>
+                    <OverflowToolbar class="sapMTBStandard_0">
+                        <Text text="Escanear multiples planos:" class="sapUiTinyMargin"/>
+                        <Switch
+                                    id="swicthMultiplePlanes"
+                                    type="AcceptReject"
+                                    state="false"
+									enabled="{= ['0010'].includes(${resumen>/Operacion}) }"
+									visible="{= ['0010'].includes(${resumen>/Operacion}) }"
+									>
+						<layoutData>
+						<FlexItemData growFactor="1" />
+						</layoutData>
+						</Switch>
+                        <ToolbarSpacer/>
+                        <ToolbarSeparator />
+                        <Button
+                            text="Ingresar Scrap"
+                            type="Reject"
+                            icon="sap-icon://print"
+                            tooltip="Ingresar Scrap"
+                            visible="true"
+                            press="GetScrap"
+                        />						
+                        <ToolbarSeparator />
+                        <Button
+                            text="Ingresar Largo diverso"
+                            type="Accept"
+                            icon="sap-icon://print"
+                            tooltip="Ingresar Largo diverso"
+                            visible="true"
+                            press="GetLargoDiverso"
+                        />
+                    </OverflowToolbar>
+                </headerToolbar>
 						<columns>
 							<Column
 								hAlign="Begin"
@@ -143,6 +182,13 @@
 								vAlign="Middle"
 								width="50%"
 							>
+								<Label text="Cantidad A Notificar" />
+							</Column>
+							<Column
+								hAlign="Begin"
+								vAlign="Middle"
+								width="50%"
+							>
 								<Label text="Acciones" />
 							</Column>
 						</columns>
@@ -154,12 +200,14 @@
                                     <Text text="{CantidadPlan}" />
                                     <Text text="{CantidadBuena}" />
                                     <Text text="{cantidadPendiente}" />
+                                    <Text text="{cantidadNotificar}" />
                                     <HBox>
                                         <Button
                                             class="sapUiTinyMarginBegin"
                                             type="Emphasized"
                                             icon="sap-icon://sys-add" 
                                             press=".onSumar"
+											enabled="{= Number(${cantidadPendiente}) > 0 &amp;&amp; Number(${cantidadPendiente}) !== Number(${cantidadNotificar})}"
                                         />
                                         <Button
                                             class="sapUiTinyMarginBegin"

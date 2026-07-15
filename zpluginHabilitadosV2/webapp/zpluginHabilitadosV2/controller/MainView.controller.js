@@ -9,6 +9,13 @@ sap.ui.define([
     "sap/m/List",
     "sap/m/StandardListItem",
     "sap/m/Text",
+    "sap/m/VBox",
+    "sap/m/HBox",
+    "sap/m/Label",
+    "sap/m/Input",
+    "sap/m/Table",
+    "sap/m/ColumnListItem",
+    "sap/m/Column",
     "sap/m/MessageToast",
     "sap/ui/model/Filter",
     "sap/m/MessageBox",
@@ -16,7 +23,7 @@ sap.ui.define([
     'sap/ui/core/BusyIndicator',
     "sap/ui/model/Sorter",
     "sap/ui/core/Fragment",
-], function (jQuery, PluginViewController, JSONModel, IconPool, Dialog, Button, mobileLibrary, List, StandardListItem, Text, MessageToast, Filter, MessageBox, FilterOperator, BusyIndicator, Sorter, Fragment) {
+], function (jQuery, PluginViewController, JSONModel, IconPool, Dialog, Button, mobileLibrary, List, StandardListItem, Text, VBox, HBox, Label, Input, Table, ColumnListItem, Column, MessageToast, Filter, MessageBox, FilterOperator, BusyIndicator, Sorter, Fragment) {
     "use strict";
     var ButtonType = mobileLibrary.ButtonType;
     const FORMATO = "";
@@ -48,7 +55,7 @@ sap.ui.define([
             this._focusScanner();
             let data = "";
             this.cargarTablaPuesto(data);
-
+            return;
         },
 
         onBeforeRenderingPlugin: function () {
@@ -226,7 +233,7 @@ sap.ui.define([
             this.cargarTablaFig(data);
         },
 
-        cargarTabla: function (data) {
+        cargarTabla: function (data, fnCallback) {
             var oThis = this;
             let mandante = this.getConfiguration().Mandante;
             let planta = this.getPodController().getUserPlant();
@@ -237,6 +244,9 @@ sap.ui.define([
             const oView = this.getView(),
                 oItems = { ITEMS: [] };
             var oTable = oView.byId("HABILITADOS_TABLE");
+            var oSwitch = oView.byId("swicthMultiplePlanes");
+            var bAcumular = oSwitch && oSwitch.getState();
+
             var requestJSON = {
                 "inFigura": "",
                 "inFormat": format,
@@ -256,36 +266,57 @@ sap.ui.define([
                 oTable.setBusy(true);
                 this.ajaxPostRequest(url, requestJSON,
                     function (oResponseData) {
-                        var oModel = new sap.ui.model.json.JSONModel();
                         if (oResponseData.outData.value !== undefined) {
-                            oItems.ITEMS = oResponseData.outData.value.map(function (item) {
-
+                            var nuevosItems = oResponseData.outData.value.map(function (item) {
                                 var plan = Number(item.CantidadPlan) || 0;
                                 var buena = Number(item.CantidadBuena) || 0;
-
                                 return Object.assign({}, item, {
-                                    cantidadPendiente: plan - buena
+                                    cantidadPendiente: plan - buena,
+                                    cantidadNotificar: (plan - buena) === 1 ? 1 : 0
                                 });
-
                             });
+
+                            if (bAcumular) {
+                                var oModelActual = oTable.getModel();
+                                var itemsActuales = (oModelActual && oModelActual.getProperty("/ITEMS")) || [];
+
+                                var oTextoOperacion = oView.byId("operacion");
+                                var sOperacionActual = oTextoOperacion && oTextoOperacion.getText();
+
+                                if (sOperacionActual && sOperacionActual.trim() !== "" && sOperacionActual !== operacion) {
+                                    MessageToast.show("La operación escaneada (" + operacion + ") no coincide con la operación actual (" + sOperacionActual + ")");
+                                    oTable.setBusy(false);
+                                    fnCallback && fnCallback();
+                                    return;
+                                }
+
+                                oItems.ITEMS = itemsActuales.concat(nuevosItems);
+                            } else {
+                                oItems.ITEMS = nuevosItems;
+                            }
 
                             oTable.setModel(new sap.ui.model.json.JSONModel(oItems));
                             oThis.ordenarTabla();
-                            oThis.generarResumen(oResponseData.outData.value);
+                            oThis.generarResumen(oItems.ITEMS);
                         } else {
-                            MessageToast.show(that.getView().getModel("i18n").getResourceBundle().getText("mensajeGetSinDatos"));
-                            oTable.setModel(new sap.ui.model.json.JSONModel({ ITEMS: [] }));
+                            MessageToast.show(oThis.getView().getModel("i18n").getResourceBundle().getText("mensajeGetSinDatos"));
+                            if (!bAcumular) {
+                                oTable.setModel(new sap.ui.model.json.JSONModel({ ITEMS: [] }));
+                            }
                         }
                         oTable.setBusy(false);
+                        fnCallback && fnCallback();
                     },
                     function (oError, sHttpErrorMessage) {
                         oTable.setBusy(false);
                         var err = oError || sHttpErrorMessage;
                         MessageToast.show(err);
+                        fnCallback && fnCallback();
                     })
             } catch (error) {
                 oTable.setBusy(false);
-                MessageBox.error(that.getView().getModel("i18n").getResourceBundle().getText("mensajeErrorGenerico"));
+                MessageBox.error(oThis.getView().getModel("i18n").getResourceBundle().getText("mensajeErrorGenerico"));
+                fnCallback && fnCallback();
             }
         },
         cargarTablaFig: function (data) {
@@ -326,7 +357,8 @@ sap.ui.define([
                                 var buena = Number(item.CantidadBuena) || 0;
 
                                 return Object.assign({}, item, {
-                                    cantidadPendiente: plan - buena
+                                    cantidadPendiente: plan - buena,
+                                    cantidadNotificar: 0
                                 });
 
                             });
@@ -377,6 +409,9 @@ sap.ui.define([
                     oOrdenUnico[item.Orden] = true;
                 }
             });
+            if(oResumen.Operacion != "0010"){
+                this.byId("swicthMultiplePlanes").setState(false);
+            };
             oResumen.Puestos = Object.keys(oProyectoUnico).join(", ");
             oResumen.Puestos = Object.keys(oOperacionUnico).join(", ");
             oResumen.Puestos = Object.keys(oOrdenUnico).join(", ");
@@ -389,7 +424,11 @@ sap.ui.define([
             let url = this.getPublicApiRestDataSourceUri() + "order/v1/orders?async=false";
             this.ajaxGetRequest(url, requestJSON,
                 function (oResponseData) {
-                    oThis.byId("sfc").setText(oResponseData.sfcs[0])
+                    oThis.byId("sfc").setText(oResponseData.sfcs[0]);
+                    var ordenPadre = oResponseData.customValues.find(function (item) {
+                        return item.attribute === "ORDEN_PADRE";
+                    });
+                    oThis.byId("ordenPadre").setText(ordenPadre ? Number(ordenPadre.value) : "");
                 },
                 function (oError, sHttpErrorMessage) {
                     var err = oError || sHttpErrorMessage;
@@ -463,10 +502,10 @@ sap.ui.define([
         },
         onSumar: function (oEvent) {
             const oContext = oEvent.getSource().getBindingContext();
-            let value = oContext.getProperty("cantidadPendiente") || 0;
+            let value = oContext.getProperty("cantidadNotificar") || 0;
             let cantNoti = oContext.getProperty("cantidadNotificada") || 0;
             let cantTotal = oContext.getProperty("cantidadTotal") || 0;
-            oContext.getModel().setProperty(oContext.getPath() + "/cantidadPendiente", value + 1);
+            oContext.getModel().setProperty(oContext.getPath() + "/cantidadNotificar", value + 1);
         },
 
         onRestar: function (oEvent) {
@@ -475,10 +514,10 @@ sap.ui.define([
             const oModel = oContext.getModel();
             const sPath = oContext.getPath();
 
-            let pendiente = oModel.getProperty(sPath + "/cantidadPendiente");
+            let pendiente = oModel.getProperty(sPath + "/cantidadNotificar");
 
             if (pendiente > 0) {
-                oModel.setProperty(sPath + "/cantidadPendiente", pendiente - 1);
+                oModel.setProperty(sPath + "/cantidadNotificar", pendiente - 1);
             }
         },
         procesarPlano: function (data) {
@@ -589,7 +628,7 @@ sap.ui.define([
             aContexts.forEach(function (oContext) {
                 var item = oContext.getObject();
                 var cantidadPendiente =
-                    Number(item.cantidadPendiente || 0);
+                    Number(item.cantidadNotificar || 0);
                 var cantidadPlan =
                     Number(item.CantidadPlan || 0);
                 var key =
@@ -666,7 +705,8 @@ sap.ui.define([
             var requestJSON = {
                 "inMandante": mandante,
                 "inOperacion": this.byId("operacion").getText(),
-                "inOrden": orden,
+                "inOrden": this.byId("ordenPadre").getText(),
+                "inOrderInd": orden,
                 "inPlant": planta,
                 "inProxConsumo": sTabla
             };
@@ -737,16 +777,19 @@ sap.ui.define([
             var aData = aContexts
                 .map(function (oContext) {
                     var item = oContext.getObject();
-                    var cantidadPendiente = +item.cantidadPendiente || 0;
+                    var cantidadPendiente = +item.cantidadNotificar || 0;
                     var cantidadPlan = +item.CantidadPlan || 0;
                     var cantidadBuena = +item.CantidadBuena || 0;
+
+                    var oItemLimpio = { ...item };
+                    delete oItemLimpio.cantidadPendiente;
+                    delete oItemLimpio.cantidadNotificar;
+
                     return {
-                        ...item,
-
-                        AgregarPosicion:
-                            cantidadPendiente < (cantidadPlan - cantidadBuena)
+                        ...oItemLimpio,
+                        cantidadPendiente: cantidadPendiente,
+                        AgregarPosicion: cantidadPendiente < (cantidadPlan - cantidadBuena)
                     };
-
                 })
                 .filter(function (item) {
                     return (+item.cantidadPendiente || 0) > 0;
@@ -779,9 +822,39 @@ sap.ui.define([
                     function (oResponseData) {
                         let data = "";
                         oThis.cargarTablaPuesto(data);
+
                         if (oThis._ultimoScan) {
                             if (oThis._ultimoScan.tipo === "PLANO") {
-                                oThis.cargarTabla(oThis._ultimoScan);
+                                var oSwitchMultiple = oView.byId("swicthMultiplePlanes");
+                                var bMultiple = oSwitchMultiple && oSwitchMultiple.getState();
+
+                                if (bMultiple) {
+                                    var oModelTabla = oTable.getModel();
+                                    var aItemsTabla = (oModelTabla && oModelTabla.getProperty("/ITEMS")) || [];
+                                    var aPlanos = aItemsTabla
+                                        .map(function (item) { return item.NoPlano; })
+                                        .filter(function (sPlano, index, self) {
+                                            return sPlano !== undefined && sPlano !== null && self.indexOf(sPlano) === index;
+                                        });
+
+                                    oTable.setModel(new sap.ui.model.json.JSONModel({ ITEMS: [] }));
+                                    var iIndex = 0;
+                                    var procesarSiguientePlano = function () {
+                                        if (iIndex >= aPlanos.length) {
+                                            return;
+                                        }
+                                        var sPlanoActual = aPlanos[iIndex];
+                                        iIndex++;
+                                        oThis.cargarTabla({
+                                            orden: oThis._ultimoScan.orden,
+                                            operacion: oThis._ultimoScan.operacion,
+                                            plano: sPlanoActual
+                                        }, procesarSiguientePlano);
+                                    };
+                                    procesarSiguientePlano();
+                                } else {
+                                    oThis.cargarTabla(oThis._ultimoScan);
+                                }
                             } else if (oThis._ultimoScan.tipo === "FIGURA") {
                                 oThis.cargarTablaFig(oThis._ultimoScan);
                             }
@@ -918,30 +991,56 @@ sap.ui.define([
                     text: "Escanee el puesto de trabajo"
                 });
                 this.oInpPuesto = new sap.m.Input(this.createId("inpPuesto"), {
-                    width: "100%",
-                    placeholder: "Escanee puesto",
-                    submit: function () {
-                        let sPuesto = this.oInpPuesto
-                            .getValue()
-                            .replace(/!/g, "")
-                            .trim();
-                        let oMatch = oItems.find(function (item) {
-                            return item.puesto === sPuesto;
-                        });
-                        if (!oMatch) {
-                            sap.m.MessageToast.show("Puesto no encontrado");
-                            return;
-                        }
-                        this._selectedPuesto = oMatch;
-                        this.oStepText.setText("Escanee el usuario");
-                        this.oInpUsuario.setEnabled(true);
+                width: "100%",
+                placeholder: "Escanee puesto",
+                liveChange: function (oEvent) {
+                    let sRaw = oEvent.getParameter("value");
 
-                        setTimeout(function () {
-                            this.oInpUsuario.focus();
-                        }.bind(this), 300);
+                    if (!/^!.+!$/.test(sRaw)) {
+                        return;
+                    }
 
-                    }.bind(this)
-                });
+                    let sPuesto = sRaw.replace(/!/g, "").trim();
+
+                    let oMatch = oItems.find(function (item) {
+                        return item.puesto === sPuesto;
+                    });
+
+                    if (!oMatch) {
+                        sap.m.MessageToast.show("Puesto no encontrado");
+                        this.oInpPuesto.setValue("");
+                        return;
+                    }
+
+                    this._selectedPuesto = oMatch;
+                    this.oStepText.setText("Escanee el usuario");
+                    this.oInpUsuario.setEnabled(true);
+
+                    setTimeout(function () {
+                        this.oInpUsuario.focus();
+                    }.bind(this), 300);
+                }.bind(this),
+                submit: function () {
+                    let sPuesto = this.oInpPuesto
+                        .getValue()
+                        .replace(/!/g, "")
+                        .trim();
+                    let oMatch = oItems.find(function (item) {
+                        return item.puesto === sPuesto;
+                    });
+                    if (!oMatch) {
+                        sap.m.MessageToast.show("Puesto no encontrado");
+                        return;
+                    }
+                    this._selectedPuesto = oMatch;
+                    this.oStepText.setText("Escanee el usuario");
+                    this.oInpUsuario.setEnabled(true);
+
+                    setTimeout(function () {
+                        this.oInpUsuario.focus();
+                    }.bind(this), 300);
+                }.bind(this)
+            });
 
                 this.oInpUsuario = new sap.m.Input(this.createId("inpUsuario"), {
                     width: "100%",
@@ -1011,7 +1110,7 @@ sap.ui.define([
 
         // Logica Fragment Escaneo
         AbreConsumos: async function () {
-            var order = this.byId("orden").getText();
+            var order = this.byId("ordenPadre").getText();
             if (!order) {
                 MessageToast.show("No hay orden seleccionada");
                 return;
@@ -1087,8 +1186,8 @@ sap.ui.define([
             }
         },
         onCargarConsumos: function (oEvent) {
-            var orden = this.byId("orden").getText() || "1000884";
-            var operacion = this.byId("operacion").getText() || "1000884";
+            var orden = this.byId("ordenPadre").getText();
+            var operacion = this.byId("operacion").getText();
             var oThis = this;
             let planta = this.getPodController().getUserPlant();
             var publicApiUri = this.getPublicApiRestDataSourceUri();
@@ -1178,27 +1277,34 @@ sap.ui.define([
                                                     fNecesaria
                                             };
                                         });
-                                    aComponentes.forEach(function (oItem) {
-                                        let oConsumo =
-                                            oGoodsIssueData.lineItems.find(function (oCon) {
-                                                return (
-                                                    oCon.materialId?.material ===
-                                                    oItem.material
-                                                );
-                                            });
-                                        let fConsumida =
-                                            Number(
-                                                oConsumo?.consumedQuantity?.value || 0
-                                            );
 
-                                        oItem.cantidadConsumida =
-                                            fConsumida;
+                                    aComponentes.forEach(function (oItem) {
+                                        let aConsumos = oGoodsIssueData.lineItems.filter(function (oCon) {
+                                            return (
+                                                oCon.materialId?.material === oItem.material &&
+                                                oCon.isBomComponent === false
+                                            );
+                                        });
+                                        let fConsumida = aConsumos.reduce(function (sum, oCon) {
+                                            return sum + Number(oCon.consumedQuantity?.value || 0);
+                                        }, 0);
+                                        let bHuboCancelaciones = aConsumos.some(function (oCon) {
+                                            return Number(oCon.assembledAndCanceledComponentsCount || 0) > 1;
+                                        });
+                                        if (bHuboCancelaciones) {
+                                            console.warn(
+                                                "Posibles cancelaciones detectadas para material " +
+                                                oItem.material,
+                                                aConsumos
+                                            );
+                                        }
+
+                                        oItem.cantidadConsumida = fConsumida;
 
                                         oItem.cantidadPendiente =
-                                            oItem.cantidadNecesaria -
-                                            fConsumida;
-
+                                            oItem.cantidadNecesaria - fConsumida;
                                     });
+
                                     oThis._oModel.setProperty(
                                         "/componentes",
                                         aComponentes
@@ -1220,9 +1326,9 @@ sap.ui.define([
                     );
                 },
                 function (oError, sHttpErrorMessage) {
-                    var err =
-                      oError || sHttpErrorMessage;
-                    MessageToast.show(err);
+                var err =
+                    oError || sHttpErrorMessage;
+                MessageToast.show(err);
                 }
             );
         },
@@ -1263,9 +1369,9 @@ sap.ui.define([
             }
             var oContext = oSelectedItem.getBindingContext();
             var oData = oContext.getObject();
-            var order = this.byId("orden").getText() || "1000884";
-            var operacion = this.byId("operacionActividad").getText() || "1000884";
-            var bom = this.byId("bom").getText() || "1000884";
+            var order = this.byId("ordenPadre").getText() || "1000884";
+            var operacion = this.byId("operacionActividad").getText();
+            var bom = this.byId("bom").getText();
             var oThis = this;
             let usuario = this.getPodController().getUserId();
             let planta = this.getPodController().getUserPlant();
@@ -1325,6 +1431,229 @@ sap.ui.define([
                 minutes + ":" +
                 seconds
             );
-        }
+        },
+        GetScrap: function () {
+            var oView = this.getView();
+            var oTable = oView.byId("HABILITADOS_TABLE");
+            var oModel = oTable.getModel();
+            var aItems = (oModel && oModel.getProperty("/ITEMS")) || [];
+
+            if (aItems.length === 0) {
+                MessageToast.show("Debe escanear primero para poder abrir el Scrap");
+                return;
+            }
+
+            this._abrirDialogoScrap();
+        },
+
+        GetLargoDiverso: function () {
+            var oView = this.getView();
+            var oTable = oView.byId("HABILITADOS_TABLE");
+            var oModel = oTable.getModel();
+            var aItems = (oModel && oModel.getProperty("/ITEMS")) || [];
+
+            if (aItems.length === 0) {
+                MessageToast.show("Debe escanear primero para poder abrir el Largo Diverso");
+                return;
+            }
+
+            this._abrirDialogoLargoDiverso();
+        },
+        _abrirDialogoScrap: function () {
+            var oThis = this;
+            var oView = this.getView();
+            var oTableHabilitados = oView.byId("HABILITADOS_TABLE");
+            var oModelHabilitados = oTableHabilitados.getModel();
+            var aItemsHabilitados = (oModelHabilitados && oModelHabilitados.getProperty("/ITEMS")) || [];
+
+            var aItemsScrap = aItemsHabilitados.map(function (item) {
+                return {
+                    NoPlano: item.NoPlano,
+                    Figura: item.Figura,
+                    cantidadScrap: 0
+                };
+            });
+
+            var sOrden = oView.byId("orden").getText();
+            var sOperacion = oView.byId("operacion").getText();
+            var sMaterial = oView.byId("material") ? oView.byId("material").getText() : "";
+
+            var oModelScrap = new JSONModel({
+                Orden: sOrden,
+                Operacion: sOperacion,
+                Material: sMaterial,
+                TotalScrap: 0,
+                ITEMS: aItemsScrap
+            });
+
+            if (!this._oDialogScrap) {
+                this._oDialogScrap = new Dialog({
+                    title: "Scrap",
+                    contentWidth: "40rem",
+                    content: [
+                        new VBox({
+                            class: "sapUiSmallMargin",
+                            items: [
+                                new HBox({
+                                    wrap: "Wrap",
+                                    class: "sapUiSmallMarginBottom",
+                                    items: [
+                                        new VBox({
+                                            class: "sapUiMediumMarginEnd",
+                                            items: [
+                                                new Label({ text: "Orden" }),
+                                                new Text({ text: "{scrap>/Orden}" })
+                                            ]
+                                        }),
+                                        new VBox({
+                                            class: "sapUiMediumMarginEnd",
+                                            items: [
+                                                new Label({ text: "Operación" }),
+                                                new Text({ text: "{scrap>/Operacion}" })
+                                            ]
+                                        }),
+                                        new VBox({
+                                            class: "sapUiMediumMarginEnd",
+                                            items: [
+                                                new Label({ text: "Material" }),
+                                                new Text({ text: "{scrap>/Material}" })
+                                            ]
+                                        }),
+                                        new VBox({
+                                            items: [
+                                                new Label({ text: "Total Scrap" }).addStyleClass("sapUiTinyMarginTop"),
+                                                new Text({ text: "{scrap>/TotalScrap}" }).addStyleClass("sapUiTinyMarginTop")
+                                            ]
+                                        })
+                                    ]
+                                }),
+                                new Table({
+                                    mode: "MultiSelect",
+                                    selectionChange: function (oEvent) {
+                                        oThis._onSeleccionScrap(oEvent);
+                                    },
+                                    items: {
+                                        path: "scrap>/ITEMS",
+                                        template: new ColumnListItem({
+                                            cells: [
+                                                new Text({ text: "{scrap>NoPlano}" }),
+                                                new Text({ text: "{scrap>Figura}" }),
+                                                new Input({
+                                                    type: "Number",
+                                                    value: "{scrap>cantidadScrap}",
+                                                    liveChange: function () {
+                                                        oThis._recalcularTotalScrap();
+                                                    }
+                                                })
+                                            ]
+                                        })
+                                    },
+                                    columns: [
+                                        new Column({ header: new Label({ text: "No. Plano" }) }),
+                                        new Column({ header: new Label({ text: "Figura" }) }),
+                                        new Column({ header: new Label({ text: "Cantidad Scrap" }) })
+                                    ]
+                                })
+                            ]
+                        })
+                    ],
+                    beginButton: new Button({
+                        text: "Enviar movimiento",
+                        type: "Emphasized",
+                        press: function () {
+                            oThis._onGuardarScrap();
+                        }
+                    }),
+                    endButton: new Button({
+                        text: "Cerrar",
+                        type: "Reject",
+                        press: function () {
+                            oThis.onCerrarScrap();
+                        }
+                    })
+                });
+
+                this.getView().addDependent(this._oDialogScrap);
+            }
+
+            this._oDialogScrap.setModel(oModelScrap, "scrap");
+            this._oDialogScrap.open();
+        },
+
+        _onSeleccionScrap: function () {
+            this._recalcularTotalScrap();
+        },
+
+        _recalcularTotalScrap: function () {
+            var oModelScrap = this._oDialogScrap.getModel("scrap");
+            var oTableScrap = this._oDialogScrap.getContent()[0].getItems()[1];
+            var aContextosSeleccionados = oTableScrap.getSelectedContexts();
+
+            var iTotal = aContextosSeleccionados.reduce(function (iSuma, oContext) {
+                var item = oContext.getObject();
+                return iSuma + (Number(item.cantidadScrap) || 0);
+            }, 0);
+
+            oModelScrap.setProperty("/TotalScrap", iTotal);
+        },
+
+        onCerrarScrap: function () {
+            this._oDialogScrap.close();
+        },
+
+        _onGuardarScrap: function () {
+            var oModelScrap = this._oDialogScrap.getModel("scrap");
+            var aItems = oModelScrap.getProperty("/ITEMS");
+            var tipo = "SCRAP";
+            this.sendByProduct(tipo);
+            this._oDialogScrap.close();
+        },
+
+        _abrirDialogoLargoDiverso: function () {
+            var oThis = this;
+
+            if (!this._oDialogLargoDiverso) {
+                this._oDialogLargoDiverso = new Dialog({
+                    title: "Largo Diverso",
+                    contentWidth: "30rem",
+                    content: [
+                        // aquí agregas tus controles
+                    ],
+                    beginButton: new Button({
+                        text: "Enviar movimiento",
+                        type: "Emphasized",
+                        press: function () {
+                            oThis._onGuardarLargoDiverso();
+                        }
+                    }),
+                    endButton: new Button({
+                        text: "Cerrar",
+                        icon: "sap-icon://nav-back",
+                        type: "Reject",
+                        press: function () {
+                            oThis.onCerrarLargoDiverso();
+                        }
+                    })
+                });
+
+                this.getView().addDependent(this._oDialogLargoDiverso);
+            }
+
+            this._oDialogLargoDiverso.open();
+        },
+
+        onCerrarLargoDiverso: function () {
+            this._oDialogLargoDiverso.close();
+        },
+
+        _onGuardarLargoDiverso: function () {
+            var tipo = "LARGO";
+            this.sendByProduct(tipo);
+            this._oDialogLargoDiverso.close();
+        },
+        
+        sendByProduct: function (tipo) {
+            MessageToast.show(tipo);
+        },
     });
 });
