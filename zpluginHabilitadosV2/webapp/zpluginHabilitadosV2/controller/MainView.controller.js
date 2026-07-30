@@ -16,6 +16,8 @@ sap.ui.define([
     "sap/m/Table",
     "sap/m/ColumnListItem",
     "sap/m/Column",
+    "sap/ui/layout/form/SimpleForm",
+    "sap/m/Title",
     "sap/m/MessageToast",
     "sap/ui/model/Filter",
     "sap/m/MessageBox",
@@ -23,7 +25,7 @@ sap.ui.define([
     'sap/ui/core/BusyIndicator',
     "sap/ui/model/Sorter",
     "sap/ui/core/Fragment",
-], function (jQuery, PluginViewController, JSONModel, IconPool, Dialog, Button, mobileLibrary, List, StandardListItem, Text, VBox, HBox, Label, Input, Table, ColumnListItem, Column, MessageToast, Filter, MessageBox, FilterOperator, BusyIndicator, Sorter, Fragment) {
+], function (jQuery, PluginViewController, JSONModel, IconPool, Dialog, Button, mobileLibrary, List, StandardListItem, Text, VBox, HBox, Label, Input, Table, ColumnListItem, Column, SimpleForm, Title, MessageToast, Filter, MessageBox, FilterOperator, BusyIndicator, Sorter, Fragment) {
     "use strict";
     var ButtonType = mobileLibrary.ButtonType;
     const FORMATO = "";
@@ -116,15 +118,28 @@ sap.ui.define([
 
         // Lógica de plugin
 
+    
         _focusScanner: function () {
             const oInput = this.byId("scannerInput");
 
             if (oInput) {
                 setTimeout(() => {
-                    oInput.focus();
+                    const oDomRef = oInput.getDomRef("inner") || oInput.getDomRef();
+                    if (!oDomRef) {
+                        oInput.focus();
+                        return;
+                    }
 
-                    const oDomRef = oInput.getDomRef();
-                    if (oDomRef) {
+                    const bIsTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+
+                    if (bIsTouchDevice) {
+                        oDomRef.setAttribute("inputmode", "none");
+                        oDomRef.setAttribute("readonly", "readonly");
+                        oDomRef.focus();
+                        setTimeout(() => {
+                            oDomRef.removeAttribute("readonly");
+                        }, 50);
+                    } else {
                         oDomRef.focus();
                     }
                 }, 100);
@@ -162,34 +177,38 @@ sap.ui.define([
                 this._scanTimeout = null;
             }
             const limpio = sValue.trim();
-            if (!limpio.startsWith("!") || limpio.length < 3) {
+            if (!limpio.startsWith("!") || limpio.length < 4) {
                 return;
             }
             const partes = limpio.split("!").filter(Boolean);
-            if (partes.length === 3 && limpio.endsWith("!")) {
-                const [orden, operacion, valor] = partes;
+            if (partes.length === 4 && limpio.endsWith("!")) {
+                const [proyecto, entrega, operacion, valor] = partes;
                 const operacionFormateada = operacion.padStart(4, "0");
                 if (/^\d+$/.test(valor)) {
                     this._ultimoScan = {
                         tipo: "PLANO",
-                        orden,
+                        proyecto,
+                        entrega,
                         operacion: operacionFormateada,
                         plano: valor
                     };
                     this._procesarScanOrden({
-                        orden,
+                        proyecto,
+                        entrega,
                         operacion: operacionFormateada,
                         plano: valor
                     });
                 } else {
                     this._ultimoScan = {
                         tipo: "FIGURA",
-                        orden,
+                        proyecto,
+                        entrega,
                         operacion: operacionFormateada,
                         figura: valor
                     };
                     this._procesarScanFigura({
-                        orden,
+                        proyecto,
+                        entrega,
                         operacion: operacionFormateada,
                         figura: valor
                     });
@@ -240,7 +259,8 @@ sap.ui.define([
             let operacion = data.operacion;
             let format = FORMATO;
             let noPlano = data.plano;
-            let orden = data.orden;
+            let proyecto = data.proyecto;
+            let entrega = data.entrega;
             const oView = this.getView(),
                 oItems = { ITEMS: [] };
             var oTable = oView.byId("HABILITADOS_TABLE");
@@ -252,16 +272,17 @@ sap.ui.define([
                 "inFormat": format,
                 "inOperacion": operacion,
                 "inPosicion": "",
-                "inProyecto": "",
+                "inProyecto": proyecto,
                 "inSapClient": mandante,
                 "inMaterial": "",
                 "inCentro": planta,
                 "inNoPlano": noPlano,
-                "inOrden": orden
+                "inOrden": "",
+                "inEntrega": entrega
             };
 
             var url = this.getPublicApiRestDataSourceUri() +
-                "/pe/api/v1/process/processDefinitions/start?key=REG_1c7d115d-62e9-4c5e-bbaa-c944e7d99e56&async=false";
+                "/pe/api/v1/process/processDefinitions/start?key=REG_2ab27bba-92ae-4df5-8d96-b701d2fbfbfb&async=false";
             try {
                 oTable.setBusy(true);
                 this.ajaxPostRequest(url, requestJSON,
@@ -326,7 +347,8 @@ sap.ui.define([
             let operacion = data.operacion;
             let format = FORMATO;
             let figura = data.figura;
-            let orden = data.orden;
+            let proyecto = data.proyecto;
+            let entrega = data.entrega;
             const oView = this.getView(),
                 oItems = { ITEMS: [] };
             var oTable = oView.byId("HABILITADOS_TABLE");
@@ -335,12 +357,13 @@ sap.ui.define([
                 "inFormat": format,
                 "inOperacion": operacion,
                 "inPosicion": "",
-                "inProyecto": "",
+                "inProyecto": proyecto,
                 "inSapClient": mandante,
                 "inMaterial": "",
                 "inCentro": planta,
                 "inNoPlano": "",
-                "inOrden": orden
+                "inOrden": "",
+                "inEntrega": entrega
             };
 
             var url = this.getPublicApiRestDataSourceUri() +
@@ -846,7 +869,8 @@ sap.ui.define([
                                         var sPlanoActual = aPlanos[iIndex];
                                         iIndex++;
                                         oThis.cargarTabla({
-                                            orden: oThis._ultimoScan.orden,
+                                            proyecto: oThis._ultimoScan.proyecto,
+                                            entrega: oThis._ultimoScan.entrega,
                                             operacion: oThis._ultimoScan.operacion,
                                             plano: sPlanoActual
                                         }, procesarSiguientePlano);
@@ -1136,8 +1160,8 @@ sap.ui.define([
         },
         onScanLiveupdate: function (oEvent) {
             var oThis = this;
-            var orden = this.byId("orden").getText() || "1000884";
-            var operacion = this.byId("operacionActividad").getText() || "1000884-0-0010";
+            var orden = this.byId("orden").getText() || "N/A";
+            var operacion = this.byId("operacionActividad").getText() || "N/A";
             var planta = this.getPodController().getUserPlant();          
             var url = this.getPublicApiRestDataSourceUri() +
             "/pe/api/v1/process/processDefinitions/start?key=REG_ea2930be-d3c5-4f09-884e-949542075622&async=false";
@@ -1432,161 +1456,263 @@ sap.ui.define([
                 seconds
             );
         },
-        GetScrap: function () {
-            var oView = this.getView();
-            var oTable = oView.byId("HABILITADOS_TABLE");
-            var oModel = oTable.getModel();
-            var aItems = (oModel && oModel.getProperty("/ITEMS")) || [];
 
-            if (aItems.length === 0) {
+        // Logica Fragment Scrap
+
+        GetScrap: async function () {
+            var oView = this.getView();
+            var oThis = this;
+            var oTableHabilitados = this.byId("HABILITADOS_TABLE");
+            var oModelHabilitados = oTableHabilitados.getModel();
+            var aItemsHabilitados = (oModelHabilitados && oModelHabilitados.getProperty("/ITEMS")) || [];
+
+            if (aItemsHabilitados.length === 0) {
                 MessageToast.show("Debe escanear primero para poder abrir el Scrap");
                 return;
             }
-
-            this._abrirDialogoScrap();
-        },
-
-        GetLargoDiverso: function () {
-            var oView = this.getView();
-            var oTable = oView.byId("HABILITADOS_TABLE");
-            var oModel = oTable.getModel();
-            var aItems = (oModel && oModel.getProperty("/ITEMS")) || [];
-
-            if (aItems.length === 0) {
-                MessageToast.show("Debe escanear primero para poder abrir el Largo Diverso");
-                return;
-            }
-
-            this._abrirDialogoLargoDiverso();
-        },
-        _abrirDialogoScrap: function () {
-            var oThis = this;
-            var oView = this.getView();
-            var oTableHabilitados = oView.byId("HABILITADOS_TABLE");
-            var oModelHabilitados = oTableHabilitados.getModel();
-            var aItemsHabilitados = (oModelHabilitados && oModelHabilitados.getProperty("/ITEMS")) || [];
 
             var aItemsScrap = aItemsHabilitados.map(function (item) {
                 return {
                     NoPlano: item.NoPlano,
                     Figura: item.Figura,
-                    cantidadScrap: 0
+                    CantidadPlan: item.CantidadPlan,
+                    CantidadBuena: item.CantidadBuena,
+                    status: item.Status,
+                    cantidadScrap: item.Zkgscrap,
+                    Material: item.Material,
+                    Centro: item.Centro,
+                    Operacion: item.Operacion,
+                    Posicion: item.Posicion,
+                    Proyecto: item.Proyecto,
+                    Atraso: item.Atraso,
+                    Usuario: item.Usuario,
+                    CantidadPlan: item.CantidadPlan,
+                    fechaFin: item.fechaFin,
+                    fechaInicio: item.fechaInicio,
+                    FechaNueva: item.FechaNueva,
+                    FechaRegistro: item.FechaRegistro,
+                    PtoTrabajo: item.PtoTrabajo,
+                    Enabled: item.Status == "C" ? true : false,
                 };
             });
+            aItemsScrap = this._prorratearScrap(aItemsScrap);
 
-            var sOrden = oView.byId("orden").getText();
-            var sOperacion = oView.byId("operacion").getText();
-            var sMaterial = oView.byId("material") ? oView.byId("material").getText() : "";
+            var sOrden = this.byId("ordenPadre").getText();
+            var sOperacion = this.byId("operacion").getText();
+            let planta = this.getPodController().getUserPlant();
+            var publicApiUri = this.getPublicApiRestDataSourceUri();
 
+            var sMaterialScrap = "";
+
+            try {
+                let requestJSON = {
+                    plant: planta,
+                    order: sOrden
+                };
+                let url = publicApiUri + "order/v1/orders?async=false";
+
+                let oOrderData = await new Promise(function (resolve, reject) {
+                    oThis.ajaxGetRequest(url, requestJSON, resolve, reject);
+                });
+
+                let bom = oOrderData.bom?.bom || "";
+                let requestJSON2 = {
+                    plant: planta,
+                    bom: bom,
+                    type: "SHOP_ORDER"
+                };
+                let url2 = publicApiUri + "bom/v1/boms?async=false";
+
+                let oBomData = await new Promise(function (resolve, reject) {
+                    oThis.ajaxGetRequest(url2, requestJSON2, resolve, reject);
+                });
+
+                let oBom = oBomData?.[0] || {};
+                let aComponents = oBom.components || [];
+                let operationSuffix = sOperacion;
+                let oOperacion = aComponents.find(function (oComp) {
+                    let sOperation =
+                        oComp.assemblyOperationActivity?.operationActivity || "";
+
+                    return sOperation.endsWith(operationSuffix);
+                });
+                let operationActivity =
+                    oOperacion?.assemblyOperationActivity?.operationActivity || "";
+
+                let oComponenteScrap = aComponents.find(function (oComp) {
+                    var sOperation =
+                        oComp.assemblyOperationActivity?.operationActivity || "";
+
+                    return (
+                        oComp.componentType === "BY_PRODUCT" &&
+                        oComp.material.material.includes("200012") &&
+                        sOperation === operationActivity
+                    );
+                });
+
+                sMaterialScrap = oComponenteScrap?.material?.material || "";
+                console.log(sMaterialScrap);
+
+            } catch (oError) {
+                var err = oError?.message || oError;
+                MessageToast.show(err);
+                return; // si falla, no continúes a abrir el diálogo sin material
+            }
+            
             var oModelScrap = new JSONModel({
                 Orden: sOrden,
                 Operacion: sOperacion,
-                Material: sMaterial,
+                Material: sMaterialScrap,
                 TotalScrap: 0,
+                TotalScrapNotificado: 0,
                 ITEMS: aItemsScrap
             });
 
             if (!this._oDialogScrap) {
-                this._oDialogScrap = new Dialog({
-                    title: "Scrap",
-                    contentWidth: "40rem",
-                    content: [
-                        new VBox({
-                            class: "sapUiSmallMargin",
-                            items: [
-                                new HBox({
-                                    wrap: "Wrap",
-                                    class: "sapUiSmallMarginBottom",
-                                    items: [
-                                        new VBox({
-                                            class: "sapUiMediumMarginEnd",
-                                            items: [
-                                                new Label({ text: "Orden" }),
-                                                new Text({ text: "{scrap>/Orden}" })
-                                            ]
-                                        }),
-                                        new VBox({
-                                            class: "sapUiMediumMarginEnd",
-                                            items: [
-                                                new Label({ text: "Operación" }),
-                                                new Text({ text: "{scrap>/Operacion}" })
-                                            ]
-                                        }),
-                                        new VBox({
-                                            class: "sapUiMediumMarginEnd",
-                                            items: [
-                                                new Label({ text: "Material" }),
-                                                new Text({ text: "{scrap>/Material}" })
-                                            ]
-                                        }),
-                                        new VBox({
-                                            items: [
-                                                new Label({ text: "Total Scrap" }).addStyleClass("sapUiTinyMarginTop"),
-                                                new Text({ text: "{scrap>/TotalScrap}" }).addStyleClass("sapUiTinyMarginTop")
-                                            ]
-                                        })
-                                    ]
-                                }),
-                                new Table({
-                                    mode: "MultiSelect",
-                                    selectionChange: function (oEvent) {
-                                        oThis._onSeleccionScrap(oEvent);
-                                    },
-                                    items: {
-                                        path: "scrap>/ITEMS",
-                                        template: new ColumnListItem({
-                                            cells: [
-                                                new Text({ text: "{scrap>NoPlano}" }),
-                                                new Text({ text: "{scrap>Figura}" }),
-                                                new Input({
-                                                    type: "Number",
-                                                    value: "{scrap>cantidadScrap}",
-                                                    liveChange: function () {
-                                                        oThis._recalcularTotalScrap();
-                                                    }
-                                                })
-                                            ]
-                                        })
-                                    },
-                                    columns: [
-                                        new Column({ header: new Label({ text: "No. Plano" }) }),
-                                        new Column({ header: new Label({ text: "Figura" }) }),
-                                        new Column({ header: new Label({ text: "Cantidad Scrap" }) })
-                                    ]
-                                })
-                            ]
-                        })
-                    ],
-                    beginButton: new Button({
-                        text: "Enviar movimiento",
-                        type: "Emphasized",
-                        press: function () {
-                            oThis._onGuardarScrap();
-                        }
-                    }),
-                    endButton: new Button({
-                        text: "Cerrar",
-                        type: "Reject",
-                        press: function () {
-                            oThis.onCerrarScrap();
-                        }
-                    })
+                this._oDialogScrap = await Fragment.load({
+                    id: oView.getId(),
+                    name: "serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.fragments.scrap",
+                    controller: this
                 });
-
-                this.getView().addDependent(this._oDialogScrap);
+                oView.addDependent(this._oDialogScrap);
             }
 
             this._oDialogScrap.setModel(oModelScrap, "scrap");
             this._oDialogScrap.open();
+            this.onConsultaScrapTotal(sOrden, sMaterialScrap, planta);
         },
 
-        _onSeleccionScrap: function () {
+        _prorratearScrap: function (aItems) {
+            var oGrupos = {};
+
+            aItems.forEach(function (item) {
+                var sKey = item.NoPlano + "|" + item.Figura;
+
+                if (!oGrupos[sKey]) {
+                    oGrupos[sKey] = {
+                        cantidadTotal: 0,
+                        scrapTotal: 0
+                    };
+                }
+
+                oGrupos[sKey].cantidadTotal += Number(item.CantidadPlan) || 0;
+                oGrupos[sKey].scrapTotal += Number(item.cantidadScrap) || 0;
+            });
+            return aItems.map(function (item) {
+                var sKey = item.NoPlano + "|" + item.Figura;
+                var oGrupo = oGrupos[sKey];
+
+                var nFactor = oGrupo.cantidadTotal > 0
+                    ? oGrupo.scrapTotal / oGrupo.cantidadTotal
+                    : 0;
+
+                var nBase = (Number(item.CantidadBuena) > 0)
+                    ? Number(item.CantidadBuena)
+                    : Number(item.CantidadPlan) || 0;
+
+                var nScrapProrrateado = nFactor * nBase;
+
+                return Object.assign({}, item, {
+                    cantidadScrap: Math.round(nScrapProrrateado * 100) / 100 
+                });
+            });
+        },
+
+        onSeleccionScrap: function () {
             this._recalcularTotalScrap();
         },
+        
 
-        _recalcularTotalScrap: function () {
+        onConsultaScrapTotal: async function (sOrden, sMaterialScrap, planta) {
+            var oThis = this;
             var oModelScrap = this._oDialogScrap.getModel("scrap");
-            var oTableScrap = this._oDialogScrap.getContent()[0].getItems()[1];
+
+            if (!sMaterialScrap) {
+                oModelScrap.setProperty("/TotalScrapNotificado", 0);
+                return;
+            }
+
+            var publicApiUri = this.getPublicApiRestDataSourceUri();
+
+            try {
+                let requestJSON = {
+                    plant: planta,
+                    order: sOrden
+                };
+                let url = publicApiUri + "order/v1/orders?async=false";
+
+                let oOrderData = await new Promise(function (resolve, reject) {
+                    oThis.ajaxGetRequest(url, requestJSON, resolve, reject);
+                });
+
+                let sfc = oOrderData.sfcs?.[0] || "";
+
+                let requestJSON2 = {
+                    plant: planta,
+                    order: sOrden,
+                    sfc: sfc
+                };
+                let url2 = publicApiUri + "inventory/v1/inventory/goodsReceipts/summarize?async=false";
+
+                let oGoodsIssueData = await new Promise(function (resolve, reject) {
+                    oThis.ajaxGetRequest(url2, requestJSON2, resolve, reject);
+                });
+
+                var aConsumosScrap = (oGoodsIssueData.sfcs[0].items || []).filter(function (oCon) {
+                    return (
+                        oCon.material === sMaterialScrap
+                    );
+                });
+
+                var fTotalNotificado = aConsumosScrap.reduce(function (sum, oCon) {
+                    return sum + Math.abs(Number(oCon.quantityInBaseUnit?.value || 0));
+                }, 0);
+
+                oModelScrap.setProperty("/TotalScrapNotificado", fTotalNotificado);
+
+            } catch (oError) {
+                var err = oError?.message || oError;
+                MessageToast.show(err);
+                oModelScrap.setProperty("/TotalScrapNotificado", 0);
+            }
+        },
+
+        onCambioCantidadScrap: function (oEvent) {
+            var oInput = oEvent.getSource();
+            var oContext = oInput.getBindingContext("scrap");
+            var sNuevoValor = oEvent.getParameter("value");
+
+            oContext.getModel().setProperty(
+                oContext.getPath() + "/cantidadScrap",
+                Number(sNuevoValor) || 0
+            );
+
+            this.onRecalcularTotalScrap(oEvent);
+        },
+
+        onRecalcularTotalScrap: function (oEvent) {
+            var oTable = this.byId("HABILITADOS_SCRAP");
+            var oListItem = oEvent.getParameter("listItem");
+            var bSelected = oEvent.getParameter("selected");
+            if (oListItem) {
+                var oContext = oListItem.getBindingContext("scrap");
+                var oData = oContext.getObject();
+
+                if (bSelected && !oData.Enabled) {
+                    oTable.setSelectedItem(oListItem, false);
+                    MessageToast.show("Ya se envió el scrap para esta fila, seleccione una diferente");
+                    return;
+                }
+            } else {
+                oTable.getItems().forEach(function (oItem) {
+                    var oCtx = oItem.getBindingContext("scrap");
+                    if (oCtx && !oCtx.getObject().Enabled && oItem.getSelected()) {
+                        oTable.setSelectedItem(oItem, false);
+                    }
+                });
+            }
+            var oTableScrap = this.byId("HABILITADOS_SCRAP");
+            var oModelScrap = this._oDialogScrap.getModel("scrap");
             var aContextosSeleccionados = oTableScrap.getSelectedContexts();
 
             var iTotal = aContextosSeleccionados.reduce(function (iSuma, oContext) {
@@ -1601,59 +1727,272 @@ sap.ui.define([
             this._oDialogScrap.close();
         },
 
-        _onGuardarScrap: function () {
+        onGuardarScrap: function () {
             var oModelScrap = this._oDialogScrap.getModel("scrap");
-            var aItems = oModelScrap.getProperty("/ITEMS");
+            var materialScrap = "000000000000" + this.byId("MaterialScrap").getText();
             var tipo = "SCRAP";
-            this.sendByProduct(tipo);
+            var total = this.byId("TotalScrap").getText();
+
+            var oTable = this.byId("HABILITADOS_SCRAP");
+            var aSelectedItems = oTable.getSelectedItems();
+
+            var aItems = aSelectedItems
+                .map(function (oItem) {
+                    return oItem.getBindingContext("scrap").getObject();
+                })
+                .filter(function (oItem) {
+                    return oItem.status === "C";
+                });
+
+            this.sendByProduct(tipo, materialScrap, total, aItems,"","");
             this._oDialogScrap.close();
         },
 
-        _abrirDialogoLargoDiverso: function () {
-            var oThis = this;
+        formatearTextoStatus: function (estado) {
+            if (estado !== null) {
+                return this.obtenerDatosStatus(estado).texto;
+            }
+        },
 
-            if (!this._oDialogLargoDiverso) {
-                this._oDialogLargoDiverso = new Dialog({
-                    title: "Largo Diverso",
-                    contentWidth: "30rem",
-                    content: [
-                        // aquí agregas tus controles
-                    ],
-                    beginButton: new Button({
-                        text: "Enviar movimiento",
-                        type: "Emphasized",
-                        press: function () {
-                            oThis._onGuardarLargoDiverso();
-                        }
-                    }),
-                    endButton: new Button({
-                        text: "Cerrar",
-                        icon: "sap-icon://nav-back",
-                        type: "Reject",
-                        press: function () {
-                            oThis.onCerrarLargoDiverso();
-                        }
-                    })
-                });
+        formatearColorStatus: function (estado) {
+            if (estado !== null) {
+                return this.obtenerDatosStatus(estado).color;
+            }
+        },
+        obtenerDatosStatus: function (estado) {
+            switch (estado) {
+                case "": //Nada
+                    return {
+                        "texto": "Sin iniciar",
+                        "color": "Indication12",
+                        "icono": "sap-icon://pending",
+                        "estadoBotonIniciar": true,
+                        "estadoInputCtdBuena": false,
+                        "estadoBotonCompletar": false
+                    };
+                case "S": //Iniciado
+                    return {
+                        "texto": "iniciado",
+                        "color": "Indication15",
+                        "icono": "sap-icon://wrench",
+                        "estadoBotonIniciar": false,
+                        "estadoInputCtdBuena": true,
+                        "estadoBotonCompletar": true
+                    };
+                case "C": //Completado
+                    return {
+                        "texto": "Completado sin Scrap",
+                        "color": "Indication14",
+                        "icono": "sap-icon://status-positive",
+                        "estadoBotonIniciar": false,
+                        "estadoInputCtdBuena": false,
+                        "estadoBotonCompletar": false
+                    };
+                case "P": //Pausa
+                    return {
+                        "texto": "Pausa",
+                        "color": "Indication13",
+                        "icono": "sap-icon://pause",
+                        "estadoBotonIniciar": true,
+                        "estadoInputCtdBuena": false,
+                        "estadoBotonCompletar": false
+                    };
+                case "E": //Entregdo
+                    return {
+                        "texto": "Entrega de Scrap",
+                        "color": "Indication15",
+                        "icono": "sap-icon://status-positive",
+                        "estadoBotonIniciar": false,
+                        "estadoInputCtdBuena": false,
+                        "estadoBotonCompletar": false
+                    };
+                default:
+                    break;
+            }
+        },
 
-                this.getView().addDependent(this._oDialogLargoDiverso);
+        // Logica Fragment Largo Diverso
+
+        GetLargoDiverso: async function () {
+            var oView = this.getView();
+            var oTableHabilitados = this.byId("HABILITADOS_TABLE");
+            var oModelHabilitados = oTableHabilitados.getModel();
+            var aItemsHabilitados = (oModelHabilitados && oModelHabilitados.getProperty("/ITEMS")) || [];
+
+            if (aItemsHabilitados.length === 0) {
+                MessageToast.show("Debe escanear primero para poder abrir el Largo Diverso");
+                return;
             }
 
+            var aPlanosVistos = [];
+            var aItemsLargo = aItemsHabilitados.reduce(function (aAcc, item) {
+                if (aPlanosVistos.indexOf(item.NoPlano) === -1) {
+                    aPlanosVistos.push(item.NoPlano);
+                    aAcc.push({
+                        NoPlano: item.NoPlano,
+                        Figura: item.Figura,
+                        Zmatprim1: item.Zmatprim1,
+                        cantidadNotificar: 0,
+                        Labels: 0
+                    });
+                }
+                return aAcc;
+            }, []);
+
+            var sOrden = this.byId("ordenPadre").getText();
+            var sOperacion = this.byId("operacion").getText();
+            var sMaterial = "";
+
+            var oModelLargo = new JSONModel({
+                Orden: sOrden,
+                Operacion: sOperacion,
+                Material: sMaterial,
+                TotalNotificar: 0,
+                ITEMS: aItemsLargo
+            });
+
+            if (!this._oDialogLargoDiverso) {
+                this._oDialogLargoDiverso = await Fragment.load({
+                    id: oView.getId(),
+                    name: "serviacero.custom.plugins.zpluginHabilitadosV2.zpluginHabilitadosV2.fragments.largo",
+                    controller: this
+                });
+                oView.addDependent(this._oDialogLargoDiverso);
+            }
+
+            this._oDialogLargoDiverso.setModel(oModelLargo, "largo");
             this._oDialogLargoDiverso.open();
+        },
+
+        onCambioCantidadLargo: function (oEvent) {
+            var oInput = oEvent.getSource();
+            var oContext = oInput.getBindingContext("largo");
+            var sNuevoValor = oEvent.getParameter("value");
+
+            oContext.getModel().setProperty(
+                oContext.getPath() + "/cantidadNotificar",
+                Number(sNuevoValor) || 0
+            );
+
+            this.onRecalcularTotalLargo();
+        },
+
+        onRecalcularTotalLargo: function () {
+            var oTableLargo = this.byId("HABILITADOS_LARGO");
+            var oModelLargo = this._oDialogLargoDiverso.getModel("largo");
+            var aContextosSeleccionados = oTableLargo.getSelectedContexts();
+
+            var iTotal = aContextosSeleccionados.reduce(function (iSuma, oContext) {
+                var item = oContext.getObject();
+                return iSuma + (Number(item.cantidadNotificar) || 0);
+            }, 0);
+
+            oModelLargo.setProperty("/TotalNotificar", iTotal);
         },
 
         onCerrarLargoDiverso: function () {
             this._oDialogLargoDiverso.close();
         },
 
-        _onGuardarLargoDiverso: function () {
+        onGuardarLargoDiverso: function () {
             var tipo = "LARGO";
-            this.sendByProduct(tipo);
+            var total = this.byId("TotalNotificarLargo").getText();
+            var oTableLargo = this.byId("HABILITADOS_LARGO");
+
+            var aSelectedItems = oTableLargo.getSelectedItems();
+            var aItems = aSelectedItems.map(function (oItem) {
+                return oItem.getBindingContext("largo").getObject();
+            });
+
+            var labels = aItems.reduce(function (nSum, oItem) {
+                return nSum + (Number(oItem.Labels) || 0);
+            }, 0);
+
+            var materialConsumo = aItems.length > 0 ? aItems[0].Zmatprim1 : "";
+
+            var planos = aItems.map(function (oItem) {
+                return oItem.NoPlano;
+            }).join(",");
+
+            this.sendByProduct(tipo, "000000000000200294", total, [], labels, materialConsumo,planos);
             this._oDialogLargoDiverso.close();
         },
         
-        sendByProduct: function (tipo) {
-            MessageToast.show(tipo);
+        // Logica envio de sub productos
+
+        sendByProduct: function (tipo,material,total,itemsScrap,labels,materialConsumo,planos) {
+            var oThis = this;
+            var user = this.getPodController().getUserId();
+            var plant = this.getPodController().getUserPlant();
+            var oView = this.getView();
+            var requestJSON = {
+                "inMaterial": material,
+                "inMaterialConsumo": "000000000000" + materialConsumo,
+                "inOrder": this.byId("ordenPadre").getText(),
+                "inPlant": plant,
+                "inQuantity": total,
+                "inUser": user,
+                "inType": tipo,
+                "inItemsScrap": JSON.stringify(itemsScrap),
+                "inLabels": labels || 1,
+                "inWorkCenter": "CC02",
+                "inPlanos" : planos
+            };
+            var oTable = this.byId("HABILITADOS_TABLE");
+
+            var url = this.getPublicApiRestDataSourceUri() +
+                "/pe/api/v1/process/processDefinitions/start?key=REG_870dc0c7-009d-48d7-98f2-594f0efd5376&async=false";
+            try {
+                this.ajaxPostRequest(url, requestJSON,
+                    function (oResponseData) {
+                        MessageBox.success(oResponseData.outMessage);
+                        if (oThis._ultimoScan) {
+                            if (oThis._ultimoScan.tipo === "PLANO") {
+                                var oSwitchMultiple = oView.byId("swicthMultiplePlanes");
+                                var bMultiple = oSwitchMultiple && oSwitchMultiple.getState();
+
+                                if (bMultiple) {
+                                    var oModelTabla = oTable.getModel();
+                                    var aItemsTabla = (oModelTabla && oModelTabla.getProperty("/ITEMS")) || [];
+                                    var aPlanos = aItemsTabla
+                                        .map(function (item) { return item.NoPlano; })
+                                        .filter(function (sPlano, index, self) {
+                                            return sPlano !== undefined && sPlano !== null && self.indexOf(sPlano) === index;
+                                        });
+
+                                    oTable.setModel(new sap.ui.model.json.JSONModel({ ITEMS: [] }));
+                                    var iIndex = 0;
+                                    var procesarSiguientePlano = function () {
+                                        if (iIndex >= aPlanos.length) {
+                                            return;
+                                        }
+                                        var sPlanoActual = aPlanos[iIndex];
+                                        iIndex++;
+                                        oThis.cargarTabla({
+                                            proyecto: oThis._ultimoScan.proyecto,
+                                            entrega: oThis._ultimoScan.entrega,
+                                            operacion: oThis._ultimoScan.operacion,
+                                            plano: sPlanoActual
+                                        }, procesarSiguientePlano);
+                                    };
+                                    procesarSiguientePlano();
+                                } else {
+                                    oThis.cargarTabla(oThis._ultimoScan);
+                                }
+                            } else if (oThis._ultimoScan.tipo === "FIGURA") {
+                                oThis.cargarTablaFig(oThis._ultimoScan);
+                            }
+                        }
+                    },
+                    function (oError, sHttpErrorMessage) {
+                        var err = oError || sHttpErrorMessage;
+                        MessageToast.show(err);
+                        //fnCallback && fnCallback();
+                    })
+            } catch (error) {
+                MessageBox.error(oThis.getView().getModel("i18n").getResourceBundle().getText("mensajeErrorGenerico"));
+                fnCallback && fnCallback();
+            }
         },
     });
 });

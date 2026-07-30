@@ -1,0 +1,199 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core" 
+    xmlns:l="sap.ui.layout" 
+    xmlns:f="sap.f"
+    xmlns:card="sap.f.cards"
+    xmlns:ndc="sap.ndc">
+
+    <Dialog
+        id="Scrap"
+        title="Scrap"
+        stretch="true"
+        showHeader="true">
+
+        <customHeader>
+            <Bar>
+                <contentLeft>
+                    <Button
+                        icon="sap-icon://nav-back"
+                        press=".onCerrarScrap"/>
+                </contentLeft>
+                <contentMiddle>
+                    <Title text="ingreso de scrap"/>
+                </contentMiddle>
+            </Bar>
+        </customHeader>
+        <content>
+            <FlexBox
+				wrap="Wrap"
+				justifyContent="Center"
+				alignItems="Center">
+				<VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+					<f:Card width="20rem" height="5rem" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+						<f:content>
+                            <List
+                                class="sapUiSmallMarginBottom"
+                                showSeparators="None">
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Orden: " />
+                                        </VBox>
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            text="{scrap>/Orden}"
+                                            state="None" />
+                                    </HBox>
+                                </CustomListItem>
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Operación: " />
+                                        </VBox>
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            text="{scrap>/Operacion}"
+                                            state="None" />
+                                    </HBox>
+                                </CustomListItem>
+                            </List>
+						</f:content>
+					</f:Card>
+				</VBox>
+                
+				<VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+					<f:Card width="20rem" height="5rem" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+						<f:content>
+                            <List
+                                class="sapUiSmallMarginBottom"
+                                showSeparators="None">
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Material: " />
+                                        </VBox>
+                                        <!-- text="{scrap>/Material}" -->
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            text="200012"
+                                            state="None"
+                                            id="MaterialScrap"/>
+                                    </HBox>
+                                </CustomListItem>
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Scrap a Notificar: " />
+                                        </VBox>
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            text="{= ${scrap>/TotalScrap}.toFixed(2)}"
+                                            state="None"
+                                            id="TotalScrap"/>
+                                    </HBox>
+                                </CustomListItem>
+                            </List>
+						</f:content>
+					</f:Card>
+				</VBox>
+                <VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+					<f:Card width="20rem" height="5rem" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+						<f:content>
+                            <List
+                                class="sapUiSmallMarginBottom"
+                                showSeparators="None">
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Scrap Notificado: " />
+                                        </VBox>
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            text="{= ${scrap>/TotalScrapNotificado} + ' KG'}"
+                                            state="None"/>
+                                    </HBox>
+                                </CustomListItem>
+                            </List>
+						</f:content>
+					</f:Card>
+				</VBox>
+                <VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+					<Table
+                        busyIndicatorDelay="10"
+                        class="sapUiTinyMarginBegin sapUiTinyMarginTop"
+                        sticky="ColumnHeaders,HeaderToolbar"
+                        popinLayout="GridSmall"
+                        id="HABILITADOS_SCRAP"
+                        mode="MultiSelect"
+                        alternateRowColors="true"
+                        selectionChange=".onRecalcularTotalScrap"
+                        items="{
+                            path: 'scrap>/ITEMS'
+                        }"
+                        growing="true"
+                        growingThreshold="500"
+                        >
+                            <columns>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="No. Plano" />
+                                </Column>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="Figura" />
+                                </Column>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="Cantidad Plan" />
+                                </Column>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="Cantidad Notificada" />
+                                </Column>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="Status" />
+                                </Column>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="Cantidad Scrap" />
+                                </Column>
+                            </columns>
+
+                            <items>
+                                <ColumnListItem>
+                                    <cells>
+                                        <Text text="{scrap>NoPlano}" />
+                                        <Text text="{scrap>Figura}" />
+                                        <Text text="{scrap>CantidadPlan}" />
+                                        <Text text="{scrap>CantidadBuena}" />
+                                        <ObjectStatus
+                                            class="sapUiSmallMarginBeginEnd"
+                                            text="{
+                                                path: 'scrap>status',
+                                                formatter: '.formatearTextoStatus'
+                                            }"
+                                            inverted="true"
+                                            state="{
+                                                path: 'scrap>status',
+                                                formatter: '.formatearColorStatus'
+                                            }"
+                                        />
+                                        <Input 
+                                            type="Number"
+                                            enabled="{= ['E'].excludes(${scrap>status}) }"
+                                            value="{scrap>cantidadScrap}" 
+                                            liveChange=".onCambioCantidadScrap"/>
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+                    </Table>
+				</VBox>
+				<VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+                    <Button
+                        text="Ingresar Scrap"
+                        type="Accept"
+                        icon="sap-icon://action"
+                        visible="true"
+                        press=".onGuardarScrap"
+                    />	
+				</VBox>
+			</FlexBox>
+        </content>
+    </Dialog>
+</core:FragmentDefinition>

@@ -26,7 +26,7 @@
 			text="Consumos"
 			type="Accept"
 			icon="sap-icon://visits" 
-			press="AbreConsumos" 
+			press="AbreConsumos"
 			enabled="{= ['0010','0020','0030'].includes(${resumen>/Operacion}) }"
 			visible="{= ['0010','0020','0030'].includes(${resumen>/Operacion}) }"
 			
@@ -127,7 +127,8 @@
                             type="Reject"
                             icon="sap-icon://print"
                             tooltip="Ingresar Scrap"
-                            visible="true"
+							visible="{= ['0010', '0020'].includes(${resumen>/Operacion}) }"
+							enabled="{= ['0010', '0020'].includes(${resumen>/Operacion}) }"
                             press="GetScrap"
                         />						
                         <ToolbarSeparator />
@@ -136,7 +137,8 @@
                             type="Accept"
                             icon="sap-icon://print"
                             tooltip="Ingresar Largo diverso"
-                            visible="true"
+							visible="{= ['0010', '0020'].includes(${resumen>/Operacion}) }"
+							enabled="{= ['0010', '0020'].includes(${resumen>/Operacion}) }"
                             press="GetLargoDiverso"
                         />
                     </OverflowToolbar>

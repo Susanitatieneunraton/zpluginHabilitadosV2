@@ -1,0 +1,156 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core" 
+    xmlns:l="sap.ui.layout" 
+    xmlns:f="sap.f"
+    xmlns:card="sap.f.cards"
+    xmlns:ndc="sap.ndc">
+
+    <Dialog
+        id="Largo"
+        title="Largo diverso"
+        stretch="true"
+        showHeader="true">
+
+        <customHeader>
+            <Bar>
+                <contentLeft>
+                    <Button
+                        icon="sap-icon://nav-back"
+                        press=".onCerrarLargoDiverso"/>
+                </contentLeft>
+                <contentMiddle>
+                    <Title text="ingreso de Largo diverso"/>
+                </contentMiddle>
+            </Bar>
+        </customHeader>
+        <content>
+            <FlexBox
+				wrap="Wrap"
+				justifyContent="Center"
+				alignItems="Center">
+				<VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+					<f:Card width="20rem" height="5rem" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+						<f:content>
+                            <List
+                                class="sapUiSmallMarginBottom"
+                                showSeparators="None">
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Orden: " />
+                                        </VBox>
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            text="{largo>/Orden}"
+                                            state="None" />
+                                    </HBox>
+                                </CustomListItem>
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Operación: " />
+                                        </VBox>
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            text="{largo>/Operacion}"
+                                            state="None" />
+                                    </HBox>
+                                </CustomListItem>
+                            </List>
+						</f:content>
+					</f:Card>
+				</VBox>
+                
+				<VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+					<f:Card width="20rem" height="5rem" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+						<f:content>
+                            <List
+                                class="sapUiSmallMarginBottom"
+                                showSeparators="None">
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Material: " />
+                                        </VBox>
+                                            <!-- text="{largo>/Material}" -->
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            state="None"
+                                            text="200294"
+                                            id="MaterialLargo"/>
+                                    </HBox>
+                                </CustomListItem>
+                                <CustomListItem>
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
+                                            <Title level="H3" text="Total a Notificar: " />
+                                        </VBox>
+                                        <ObjectStatus
+                                            class="sapUiTinyMargin sapUiSmallMarginEnd"
+                                            text="{largo>/TotalNotificar}"
+                                            state="None"
+                                            id="TotalNotificarLargo"/>
+                                    </HBox>
+                                </CustomListItem>
+                            </List>
+						</f:content>
+					</f:Card>
+				</VBox>
+                <VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+					<Table
+                        busyIndicatorDelay="10"
+                        class="sapUiTinyMarginBegin sapUiTinyMarginTop"
+                        sticky="ColumnHeaders,HeaderToolbar"
+                        popinLayout="GridSmall"
+                        id="HABILITADOS_LARGO"
+                        mode="MultiSelect"
+                        alternateRowColors="true"
+                        selectionChange=".onRecalcularTotalLargo"
+                        items="{
+                            path: 'largo>/ITEMS'
+                        }"
+                        growing="true"
+                        growingThreshold="500"
+                        >
+                            <columns>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="No. Plano" />
+                                </Column>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="Cantidad a Notificar" />
+                                </Column>
+                                <Column hAlign="Begin" vAlign="Middle" width="50%">
+                                    <Label text="Etiquetas a imprimir" />
+                                </Column>
+                            </columns>
+
+                            <items>
+                                <ColumnListItem>
+                                    <cells>
+                                        <Text text="{largo>NoPlano}" />
+                                        <Input 
+                                            type="Number"
+                                            value="{largo>cantidadNotificar}" 
+                                            liveChange=".onCambioCantidadLargo"/>
+                                        <Input 
+                                            type="Number"
+                                            value="{largo>Labels}"/>
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+                    </Table>
+				</VBox>
+				<VBox alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginTop">
+                    <Button
+                        text="Enviar movimiento"
+                        type="Accept"
+                        icon="sap-icon://action"
+                        visible="true"
+                        press=".onGuardarLargoDiverso"
+                    />	
+				</VBox>
+			</FlexBox>
+        </content>
+    </Dialog>
+</core:FragmentDefinition>
