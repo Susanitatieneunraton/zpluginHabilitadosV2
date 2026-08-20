@@ -145,7 +145,6 @@ sap.ui.define([
                 }, 100);
             }
         },
-
         onLiveChange: function (oEvent) {
             const oInput = oEvent.getSource();
             const sValue = oEvent.getParameter("value");
@@ -155,20 +154,15 @@ sap.ui.define([
                 this._scanTimeout = null;
             }
 
-            if (sValue.startsWith("!") && sValue.endsWith("!")) {
-                this._handleScan(sValue, oInput);
+            if (!sValue) {
                 return;
             }
-
             this._scanTimeout = setTimeout(() => {
-                if (
-                    sValue &&
-                    sValue.startsWith("!") &&
-                    sValue.endsWith("!")
-                ) {
+                this._scanTimeout = null;
+                if (sValue.startsWith("!") && sValue.endsWith("!")) {
                     this._handleScan(sValue, oInput);
                 }
-            }, 200);
+            }, 150);
         },
 
         _handleScan: function (sValue, oInput) {
@@ -1012,44 +1006,38 @@ sap.ui.define([
             var oItems = oModel.getProperty("/puestos");
             if (!this.oDefaultDialog) {
                 this.oStepText = new sap.m.Text({
-                    text: "Escanee el puesto de trabajo"
+                    text: "Escanee el puesto de trabajo",
+                    class: "sapUiSmallMargin"
                 });
                 this.oInpPuesto = new sap.m.Input(this.createId("inpPuesto"), {
-                width: "100%",
-                placeholder: "Escanee puesto",
-                liveChange: function (oEvent) {
-                    let sRaw = oEvent.getParameter("value");
+                    width: "100%",
+                    placeholder: "Escanee puesto",
+                    class: "sapUiSmallMargin",
+                    liveChange: function (oEvent) {
+                        let sRaw = oEvent.getParameter("value");
+                        sap.m.MessageToast.show(sRaw);
+                        if (!/^!.+!$/.test(sRaw)) return;
 
-                    if (!/^!.+!$/.test(sRaw)) {
-                        return;
-                    }
+                        let sPuesto = sRaw.replace(/!/g, "").trim();
+                        let oCurrentItems = oModel.getProperty("/puestos");
+                        let oMatch = oCurrentItems.find(function (item) {
+                            return item.puesto === sPuesto;
+                        });
 
-                    let sPuesto = sRaw.replace(/!/g, "").trim();
-
-                    let oMatch = oItems.find(function (item) {
-                        return item.puesto === sPuesto;
-                    });
-
-                    if (!oMatch) {
-                        sap.m.MessageToast.show("Puesto no encontrado");
-                        this.oInpPuesto.setValue("");
-                        return;
-                    }
-
-                    this._selectedPuesto = oMatch;
-                    this.oStepText.setText("Escanee el usuario");
-                    this.oInpUsuario.setEnabled(true);
-
-                    setTimeout(function () {
-                        this.oInpUsuario.focus();
-                    }.bind(this), 300);
+                        if (!oMatch) {
+                            sap.m.MessageToast.show("Puesto no encontrado");
+                            this.oInpPuesto.setValue("");
+                            return;
+                        }
+                        this._selectedPuesto = oMatch;
+                        this.oStepText.setText("Escanee el usuario");
+                        this.oInpUsuario.setEnabled(true);
+                        setTimeout(function () { this.oInpUsuario.focus(); }.bind(this), 300);
                 }.bind(this),
                 submit: function () {
-                    let sPuesto = this.oInpPuesto
-                        .getValue()
-                        .replace(/!/g, "")
-                        .trim();
-                    let oMatch = oItems.find(function (item) {
+                    let sPuesto = this.oInpPuesto.getValue().replace(/!/g, "").trim();
+                    let oCurrentItems = oModel.getProperty("/puestos");
+                    let oMatch = oCurrentItems.find(function (item) {
                         return item.puesto === sPuesto;
                     });
                     if (!oMatch) {
@@ -1059,32 +1047,43 @@ sap.ui.define([
                     this._selectedPuesto = oMatch;
                     this.oStepText.setText("Escanee el usuario");
                     this.oInpUsuario.setEnabled(true);
-
-                    setTimeout(function () {
-                        this.oInpUsuario.focus();
-                    }.bind(this), 300);
+                    setTimeout(function () { this.oInpUsuario.focus(); }.bind(this), 300);
                 }.bind(this)
             });
+                this.oInpPuesto.addEventDelegate({
+                    onAfterRendering: function () {
+                        this.oInpPuesto.$().find("input").attr("inputmode", "none");
+                    }.bind(this)
+                });
 
                 this.oInpUsuario = new sap.m.Input(this.createId("inpUsuario"), {
                     width: "100%",
                     enabled: false,
-                    placeholder: "Escanee usuario"
+                    placeholder: "Escanee usuario",
+                    class: "sapUiSmallMargin"
+                });
+                this.oInpUsuario.addEventDelegate({
+                    onAfterRendering: function () {
+                        this.oInpUsuario.$().find("input").attr("inputmode", "none");
+                    }.bind(this)
                 });
 
                 this.oDefaultDialog = new sap.m.Dialog({
                     title: "Escaneo para registro de sesión",
+                    class: "sapUiContentPadding",
                     content: new sap.m.VBox({
                         alignItems: "Stretch",
                         class: "sapUiSmallMargin",
                         items: [
                             this.oStepText,
                             new sap.m.Label({
-                                text: "Puesto"
+                                text: "Puesto",
+                                class: "sapUiSmallMargin"
                             }),
                             this.oInpPuesto,
                             new sap.m.Label({
-                                text: "Usuario"
+                                text: "Usuario",
+                                class: "sapUiSmallMargin"
                             }),
                             this.oInpUsuario
                         ]
@@ -1126,7 +1125,7 @@ sap.ui.define([
             // reset visual
             this.oInpPuesto.setValue("");
             this.oInpUsuario.setValue("");
-            this.oInpUsuario.setEnabled(false);
+            this.oInpUsuario.setEnabled(true);
             this.oStepText.setText("Escanee el puesto de trabajo");
             this._selectedPuesto = null;
             this.oDefaultDialog.open();
@@ -1160,51 +1159,66 @@ sap.ui.define([
         },
         onScanLiveupdate: function (oEvent) {
             var oThis = this;
-            var orden = this.byId("orden").getText() || "N/A";
-            var operacion = this.byId("operacionActividad").getText() || "N/A";
-            var planta = this.getPodController().getUserPlant();          
-            var url = this.getPublicApiRestDataSourceUri() +
-            "/pe/api/v1/process/processDefinitions/start?key=REG_ea2930be-d3c5-4f09-884e-949542075622&async=false";
-
             var sValor = (oEvent.getParameter("value") || "")
                 .replace(/\r?\n/g, "")
                 .trim();
+
+            if (this._scanLiveTimeout) {
+                clearTimeout(this._scanLiveTimeout);
+                this._scanLiveTimeout = null;
+            }
+
             if (!sValor.includes("!")) {
                 return;
             }
+
+            this._scanLiveTimeout = setTimeout(function () {
+                oThis._scanLiveTimeout = null;
+                oThis._procesarScanLote(sValor);
+            }, 150);
+        },
+
+        _procesarScanLote: function (sValor) {
+            var oThis = this;
+            var orden = this.byId("orden").getText() || "N/A";
+            var operacion = this.byId("operacionActividad").getText() || "N/A";
+            var planta = this.getPodController().getUserPlant();
+            var url = this.getPublicApiRestDataSourceUri() +
+                "/pe/api/v1/process/processDefinitions/start?key=REG_ea2930be-d3c5-4f09-884e-949542075622&async=false";
+
             var [sMaterial, sLote] = sValor.split("!");
             var aComponentes = this._oModel.getProperty("/componentes") || [];
             var oComponente = aComponentes.find(function (oItem) {
                 return oItem.material === sMaterial;
             });
+
             let requestJSON = {
                 planta: planta,
                 orden: orden,
-                lote : sLote,
-                material : sMaterial,
-                operacion : operacion
+                lote: sLote,
+                material: sMaterial,
+                operacion: operacion
             };
+
             if (oComponente) {
-            try {
-
-                this.ajaxPostRequest(url, requestJSON,
-                    function (oResponseData) {
-                        if(oResponseData.outError){
-                            MessageBox.error(oResponseData.outMessage || "Error al registrar lote");
-                        }else{
-                           MessageBox.success(oResponseData.outMessage || "Lote registrado correctamente"); 
-                        }
-                        oThis.onCargarCv(operacion);
-                        oThis.oScanInput.setValue("");
-                    },
-                    function (oError, sHttpErrorMessage) {
-                        var err = oError || sHttpErrorMessage;
-                        MessageToast.show(err);
-                    });
-
-            } catch (error) {
-                MessageBox.error(that.getView().getModel("i18n").getResourceBundle().getText("mensajeErrorGenerico"));
-            }
+                try {
+                    this.ajaxPostRequest(url, requestJSON,
+                        function (oResponseData) {
+                            if (oResponseData.outError) {
+                                MessageBox.error(oResponseData.outMessage || "Error al registrar lote");
+                            } else {
+                                MessageBox.success(oResponseData.outMessage || "Lote registrado correctamente");
+                            }
+                            oThis.onCargarCv(operacion);
+                            oThis.oScanInput.setValue("");
+                        },
+                        function (oError, sHttpErrorMessage) {
+                            var err = oError || sHttpErrorMessage;
+                            MessageToast.show(err);
+                        });
+                } catch (error) {
+                    MessageBox.error(this.getView().getModel("i18n").getResourceBundle().getText("mensajeErrorGenerico"));
+                }
             } else {
                 MessageToast.show("El material no existe en la lista");
             }
@@ -1243,9 +1257,7 @@ sap.ui.define([
                             let oOperacion = aComponents.find(function (oComp) {
                                 let sOperation =
                                     oComp.assemblyOperationActivity?.operationActivity || "";
-
                                 return sOperation.endsWith(operationSuffix);
-
                             });
                             let operationActivity =
                                 oOperacion?.assemblyOperationActivity?.operationActivity || "";
@@ -1271,117 +1283,242 @@ sap.ui.define([
                             oThis.ajaxGetRequest(
                                 url3,
                                 requestJSON3,
-
                                 function (oGoodsIssueData) {
-                                    var aComponentes = aComponents
-                                        .filter(function (oComp) {
-                                            var sOperation =
-                                            oComp.assemblyOperationActivity?.operationActivity || "";
-                                            return (
-                                                oComp.componentType === "NORMAL" &&
-                                                sOperation === operationActivity
-                                            );
-                                        })
-                                        .map(function (oComp) {
-                                            var fNecesaria =
-                                                Number(oComp.totalQuantity || 0);
-                                            return {
-                                                material:
-                                                    oComp.material?.material || "",
-                                                descripcion:
-                                                    oComp.material?.description || "",
-                                                uom:
-                                                    oComp.unitOfMeasure || "",
-
-                                                cantidadNecesaria:
-                                                    fNecesaria,
-                                                cantidadConsumida: 0,
-                                                cantidadEscaneada: 0,
-                                                cantidadPendiente:
-                                                    fNecesaria
-                                            };
-                                        });
-
-                                    aComponentes.forEach(function (oItem) {
-                                        let aConsumos = oGoodsIssueData.lineItems.filter(function (oCon) {
-                                            return (
-                                                oCon.materialId?.material === oItem.material &&
-                                                oCon.isBomComponent === false
-                                            );
-                                        });
-                                        let fConsumida = aConsumos.reduce(function (sum, oCon) {
-                                            return sum + Number(oCon.consumedQuantity?.value || 0);
-                                        }, 0);
-                                        let bHuboCancelaciones = aConsumos.some(function (oCon) {
-                                            return Number(oCon.assembledAndCanceledComponentsCount || 0) > 1;
-                                        });
-                                        if (bHuboCancelaciones) {
-                                            console.warn(
-                                                "Posibles cancelaciones detectadas para material " +
-                                                oItem.material,
-                                                aConsumos
-                                            );
-                                        }
-
-                                        oItem.cantidadConsumida = fConsumida;
-
-                                        oItem.cantidadPendiente =
-                                            oItem.cantidadNecesaria - fConsumida;
+                                    var aFiltrados = aComponents.filter(function (oComp) {
+                                        var sOperation = oComp.assemblyOperationActivity?.operationActivity || "";
+                                        return (
+                                            oComp.componentType === "NORMAL" &&
+                                            sOperation === operationActivity
+                                        );
                                     });
 
-                                    oThis._oModel.setProperty(
-                                        "/componentes",
-                                        aComponentes
-                                    );
-                                    console.log(aComponentes);
+                                    var aComponentes = new Array(aFiltrados.length);
+                                    var iPendientes = aFiltrados.length;
+
+                                    if (iPendientes === 0) {
+                                        oThis._oModel.setProperty("/componentes", []);
+                                        return;
+                                    }
+
+                                    aFiltrados.forEach(function (oComp, iIndex) {
+                                        var fNecesaria = Number(oComp.totalQuantity || 0);
+                                        var sMaterial = oComp.material?.material || "";
+
+                                        oThis.getMaterialInfo(sMaterial, planta, function (oMaterialInfo) {
+                                            var sDescripcion =
+                                                oMaterialInfo.description || oComp.material?.description || "";
+                                            var sUomBase =
+                                                oMaterialInfo.unitOfMeasure || oComp.unitOfMeasure || "";
+
+                                            var fCantidadFinal = fNecesaria;
+                                            var sUomFinal = sUomBase;
+
+                                            if (sUomBase === "KG") {
+                                                var fConvertida = oThis.convertKgToSt(
+                                                    fNecesaria,
+                                                    oMaterialInfo.alternateUnitsOfMeasure
+                                                );
+                                                if (fConvertida !== null) {
+                                                    // Necesaria: redondeo hacia arriba (no quedarse corto de material)
+                                                    fCantidadFinal = Math.ceil(fConvertida);
+                                                    sUomFinal = "ST";
+                                                }
+                                            }
+
+                                            aComponentes[iIndex] = {
+                                                material: sMaterial,
+                                                descripcion: sDescripcion,
+                                                uom: sUomFinal,
+                                                uomOriginal: sUomBase,
+                                                cantidadNecesaria: fCantidadFinal,
+                                                cantidadNecesariaOriginal: fNecesaria,
+                                                cantidadConsumida: 0,
+                                                cantidadEscaneada: 0,
+                                                cantidadPendiente: fCantidadFinal,
+                                                // temporal, se usa para convertir cantidadConsumida más abajo
+                                                _alternateUnitsOfMeasure: oMaterialInfo.alternateUnitsOfMeasure || []
+                                            };
+
+                                            iPendientes--;
+                                            if (iPendientes === 0) {
+                                                // Ya llegaron TODAS las respuestas de material, ahora sí
+                                                // calculamos consumos y actualizamos el modelo
+                                                aComponentes.forEach(function (oItem) {
+                                                    let aConsumos = oGoodsIssueData.lineItems.filter(function (oCon) {
+                                                        return (
+                                                            oCon.materialId?.material === oItem.material &&
+                                                            oCon.isBomComponent === false
+                                                        );
+                                                    });
+                                                    let fConsumida = aConsumos.reduce(function (sum, oCon) {
+                                                        return sum + Number(oCon.consumedQuantity?.value || 0);
+                                                    }, 0);
+                                                    let bHuboCancelaciones = aConsumos.some(function (oCon) {
+                                                        return Number(oCon.assembledAndCanceledComponentsCount || 0) > 1;
+                                                    });
+                                                    if (bHuboCancelaciones) {
+                                                        console.warn(
+                                                            "Posibles cancelaciones detectadas para material " +
+                                                            oItem.material,
+                                                            aConsumos
+                                                        );
+                                                    }
+
+                                                    // Consumida: misma conversión, SIN redondeo hacia arriba
+                                                    if (oItem.uomOriginal === "KG") {
+                                                        var fConsumidaConvertida = oThis.convertKgToSt(
+                                                            fConsumida,
+                                                            oItem._alternateUnitsOfMeasure
+                                                        );
+                                                        if (fConsumidaConvertida !== null) {
+                                                            fConsumida = fConsumidaConvertida;
+                                                        }
+                                                    }
+
+                                                    oItem.cantidadConsumida = Math.round(fConsumida * 1000) / 1000;
+                                                    oItem.cantidadPendiente =
+                                                        Math.round((oItem.cantidadNecesaria - fConsumida) * 1000) / 1000;
+
+                                                    delete oItem._alternateUnitsOfMeasure;
+                                                });
+
+                                                oThis._oModel.setProperty("/componentes", aComponentes);
+                                                console.log(aComponentes);
+                                            }
+                                        });
+                                    });
                                 },
                                 function (oError, sHttpErrorMessage) {
-                                    var err =
-                                        oError || sHttpErrorMessage;
+                                    var err = oError || sHttpErrorMessage;
                                     MessageToast.show(err);
                                 }
                             );
                         },
                         function (oError, sHttpErrorMessage) {
-                            var err =
-                                oError || sHttpErrorMessage;
+                            var err = oError || sHttpErrorMessage;
                             MessageToast.show(err);
                         }
                     );
                 },
                 function (oError, sHttpErrorMessage) {
-                var err =
-                    oError || sHttpErrorMessage;
-                MessageToast.show(err);
+                    var err = oError || sHttpErrorMessage;
+                    MessageToast.show(err);
                 }
             );
         },
+
+        getMaterialInfo: function (material, planta, fCallback) {
+            var oThis = this;
+            var publicApiUri = this.getPublicApiRestDataSourceUri();
+            var Material = material.padStart(18, "0");
+            let requestJSON = {
+                plant: planta,
+                material: Material
+            };
+            let url = publicApiUri + "material/v1/materials?async=false";
+            this.ajaxGetRequest(
+                url,
+                requestJSON,
+                function (oMaterialData) {
+                    var oMat = Array.isArray(oMaterialData)
+                        ? (oMaterialData[0] || {})
+                        : (oMaterialData || {});
+                    fCallback({
+                        description: oMat.description || "",
+                        unitOfMeasure: oMat.unitOfMeasure || "",
+                        alternateUnitsOfMeasure: oMat.alternateUnitsOfMeasure || []
+                    });
+                },
+                function (oError, sHttpErrorMessage) {
+                    var err = oError || sHttpErrorMessage;
+                    MessageToast.show(err);
+                    // Importante: llamar el callback igual con valores vacíos,
+                    // para no dejar el flujo colgado si un material falla
+                    fCallback({
+                        description: "",
+                        unitOfMeasure: "",
+                        alternateUnitsOfMeasure: []
+                    });
+                }
+            );
+        },
+
+        convertKgToSt: function (fCantidadKg, aAlternateUoms) {
+            var oAltSt = (aAlternateUoms || []).find(function (oAlt) {
+                return oAlt.uom === "ST";
+            });
+            if (!oAltSt) {
+                return null;
+            }
+            var fNumerador = Number(oAltSt.numerator || 1);
+            var fDenominador = Number(oAltSt.denominator || 1);
+            if (fDenominador === 0) {
+                return null;
+            }
+            var fResultado = fCantidadKg * (fDenominador / fNumerador);
+            return fResultado;
+        },
+
         onCargarCv: function (operationActivity) {
             var operacion = this.byId("operacionActividad").getText() || "1000884";
             var oThis = this;
             let planta = this.getPodController().getUserPlant();
             var publicApiUri = this.getPublicApiRestDataSourceUri();
-            var hoy = new Date();
             let requestJSON = {
                 "plant": planta,
                 "operationActivity": operacion
             };
-            
+
             var url = this.getPublicApiRestDataSourceUri() +
-            "/pe/api/v1/process/processDefinitions/start?key=REG_5eb450ec-0065-408b-a09b-a4c340666d14&async=false";
-                this.ajaxPostRequest(url, requestJSON,
-                    function (oResponseData) {
-                        if (oResponseData.outJson !== undefined) {
-                        let data = JSON.parse(oResponseData.outJson);
-                        oThis._oModel.setProperty("/escaneos", data);
-                    } else {
+                "/pe/api/v1/process/processDefinitions/start?key=REG_5eb450ec-0065-408b-a09b-a4c340666d14&async=false";
+            this.ajaxPostRequest(url, requestJSON,
+                function (oResponseData) {
+                    if (oResponseData.outJson === undefined) {
                         oThis._oModel.setProperty("/escaneos", []);
+                        return;
                     }
-                    },
-                    function (oError, sHttpErrorMessage) {
-                        var err = oError || sHttpErrorMessage;
-                        MessageToast.show(err);
+
+                    let data = JSON.parse(oResponseData.outJson) || [];
+
+                    if (data.length === 0) {
+                        oThis._oModel.setProperty("/escaneos", []);
+                        return;
+                    }
+
+                    var iPendientes = data.length;
+
+                    data.forEach(function (oItem) {
+                        var sMaterial = String(oItem.Material || "");
+                        var sUom = oItem.loteUom || "";
+                        var fCantidad = Number(oItem.loteQty || 0);
+
+                        if (sMaterial && sUom === "KG") {
+                            oThis.getMaterialInfo(sMaterial, planta, function (oMaterialInfo) {
+                                var fConvertida = oThis.convertKgToSt(
+                                    fCantidad,
+                                    oMaterialInfo.alternateUnitsOfMeasure
+                                );
+                                if (fConvertida !== null) {
+                                    oItem.loteQty = Math.round(fConvertida * 1000) / 1000;
+                                    oItem.loteUom = "ST";
+                                }
+                                iPendientes--;
+                                if (iPendientes === 0) {
+                                    oThis._oModel.setProperty("/escaneos", data);
+                                }
+                            });
+                        } else {
+                            iPendientes--;
+                            if (iPendientes === 0) {
+                                oThis._oModel.setProperty("/escaneos", data);
+                            }
+                        }
                     });
+                },
+                function (oError, sHttpErrorMessage) {
+                    var err = oError || sHttpErrorMessage;
+                    MessageToast.show(err);
+                });
         },
         onConsumo: function () {
             var oThis = this;
@@ -1545,7 +1682,7 @@ sap.ui.define([
 
                     return (
                         oComp.componentType === "BY_PRODUCT" &&
-                        oComp.material.material.includes("200012") &&
+                        oComp.unitOfMeasure === "KG" &&
                         sOperation === operationActivity
                     );
                 });
@@ -1729,7 +1866,7 @@ sap.ui.define([
 
         onGuardarScrap: function () {
             var oModelScrap = this._oDialogScrap.getModel("scrap");
-            var materialScrap = "000000000000" + this.byId("MaterialScrap").getText();
+            var materialScrap = this.byId("MaterialScrap").getText();
             var tipo = "SCRAP";
             var total = this.byId("TotalScrap").getText();
 
@@ -1815,6 +1952,7 @@ sap.ui.define([
 
         GetLargoDiverso: async function () {
             var oView = this.getView();
+            var oThis = this;
             var oTableHabilitados = this.byId("HABILITADOS_TABLE");
             var oModelHabilitados = oTableHabilitados.getModel();
             var aItemsHabilitados = (oModelHabilitados && oModelHabilitados.getProperty("/ITEMS")) || [];
@@ -1841,7 +1979,64 @@ sap.ui.define([
 
             var sOrden = this.byId("ordenPadre").getText();
             var sOperacion = this.byId("operacion").getText();
+            let planta = this.getPodController().getUserPlant();
+            var publicApiUri = this.getPublicApiRestDataSourceUri();
             var sMaterial = "";
+
+            try {
+                let requestJSON = {
+                    plant: planta,
+                    order: sOrden
+                };
+                let url = publicApiUri + "order/v1/orders?async=false";
+
+                let oOrderData = await new Promise(function (resolve, reject) {
+                    oThis.ajaxGetRequest(url, requestJSON, resolve, reject);
+                });
+
+                let bom = oOrderData.bom?.bom || "";
+                let requestJSON2 = {
+                    plant: planta,
+                    bom: bom,
+                    type: "SHOP_ORDER"
+                };
+                let url2 = publicApiUri + "bom/v1/boms?async=false";
+
+                let oBomData = await new Promise(function (resolve, reject) {
+                    oThis.ajaxGetRequest(url2, requestJSON2, resolve, reject);
+                });
+
+                let oBom = oBomData?.[0] || {};
+                let aComponents = oBom.components || [];
+                let operationSuffix = sOperacion;
+                let oOperacion = aComponents.find(function (oComp) {
+                    let sOperation =
+                        oComp.assemblyOperationActivity?.operationActivity || "";
+
+                    return sOperation.endsWith(operationSuffix);
+                });
+                let operationActivity =
+                    oOperacion?.assemblyOperationActivity?.operationActivity || "";
+
+                let oComponenteScrap = aComponents.find(function (oComp) {
+                    var sOperation =
+                        oComp.assemblyOperationActivity?.operationActivity || "";
+
+                    return (
+                        oComp.componentType === "BY_PRODUCT" &&
+                        oComp.unitOfMeasure === "M2" &&
+                        sOperation === operationActivity
+                    );
+                });
+
+                sMaterial = oComponenteScrap?.material?.material || "";
+                console.log(sMaterial);
+
+            } catch (oError) {
+                var err = oError?.message || oError;
+                MessageToast.show(err);
+                return; // si falla, no continúes a abrir el diálogo sin material
+            }
 
             var oModelLargo = new JSONModel({
                 Orden: sOrden,
@@ -1897,6 +2092,7 @@ sap.ui.define([
         onGuardarLargoDiverso: function () {
             var tipo = "LARGO";
             var total = this.byId("TotalNotificarLargo").getText();
+            var materialLargo = this.byId("MaterialLargo").getText();
             var oTableLargo = this.byId("HABILITADOS_LARGO");
 
             var aSelectedItems = oTableLargo.getSelectedItems();
@@ -1914,7 +2110,7 @@ sap.ui.define([
                 return oItem.NoPlano;
             }).join(",");
 
-            this.sendByProduct(tipo, "000000000000200294", total, [], labels, materialConsumo,planos);
+            this.sendByProduct(tipo, materialLargo, total, [], labels, materialConsumo,planos);
             this._oDialogLargoDiverso.close();
         },
         
@@ -1925,9 +2121,11 @@ sap.ui.define([
             var user = this.getPodController().getUserId();
             var plant = this.getPodController().getUserPlant();
             var oView = this.getView();
+            var materialFormateado = material.padStart(18, "0");
+            var materialConsumoFormateado = materialConsumo.padStart(18, "0");
             var requestJSON = {
-                "inMaterial": material,
-                "inMaterialConsumo": "000000000000" + materialConsumo,
+                "inMaterial": materialFormateado,
+                "inMaterialConsumo": materialConsumoFormateado,
                 "inOrder": this.byId("ordenPadre").getText(),
                 "inPlant": plant,
                 "inQuantity": total,

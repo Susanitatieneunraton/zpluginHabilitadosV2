@@ -73,11 +73,10 @@
                                         <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
                                             <Title level="H3" text="Material: " />
                                         </VBox>
-                                            <!-- text="{largo>/Material}" -->
                                         <ObjectStatus
                                             class="sapUiTinyMargin sapUiSmallMarginEnd"
                                             state="None"
-                                            text="200294"
+                                            text="{largo>/Material}"
                                             id="MaterialLargo"/>
                                     </HBox>
                                 </CustomListItem>

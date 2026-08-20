@@ -73,10 +73,9 @@
                                         <VBox class="sapUiSmallMarginBegin sapUiTinyMarginTopBottom" >
                                             <Title level="H3" text="Material: " />
                                         </VBox>
-                                        <!-- text="{scrap>/Material}" -->
                                         <ObjectStatus
                                             class="sapUiTinyMargin sapUiSmallMarginEnd"
-                                            text="200012"
+                                            text="{scrap>/Material}"
                                             state="None"
                                             id="MaterialScrap"/>
                                     </HBox>
